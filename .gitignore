@@ -1,0 +1,9 @@
+# generated test results
+TESTS-*.xml
+
+# Build artifacts
+*.egg-info
+dist/
+
+# Vim tags
+tags
