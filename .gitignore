@@ -1,9 +1,15 @@
+__pycache__/
+
 # generated test results
 TESTS-*.xml
 
 # Build artifacts
 *.egg-info
 dist/
+build/
 
 # Vim tags
 tags
+
+# Tox virtual envs
+.tox/

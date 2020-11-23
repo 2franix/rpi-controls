@@ -14,3 +14,7 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+
+def start_controller():
+    print("Nothing is done for now!")
+    raise Exception("Not implemented.")
