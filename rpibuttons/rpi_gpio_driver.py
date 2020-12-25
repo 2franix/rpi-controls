@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
 import RPi.GPIO as GPIO
-import gpio_driver
+from . import gpio_driver
 
-class RpiGpioDriver(GpioDriver):
+class RpiGpioDriver(gpio_driver.GpioDriver):
     def __init__(self):
         IGpioDriver.__init__(self)
         assert not INSTANCE, "RpiGpioDriver has already been initialized."
