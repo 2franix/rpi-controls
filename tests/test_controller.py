@@ -69,7 +69,7 @@ class TestController:
             callback_mock(button)
             # Make callback last a little more. Allows to exercise concurrent
             # event calls and graceful final stop.
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
         # Setup mocked GPIO driver.
         pressed: bool = False
@@ -81,28 +81,36 @@ class TestController:
         button.add_on_click(event_callback_mock)
 
         # Give the engine some time to update. Event should not be raised.
-        time.sleep(0.1)
+        iteration_sleep = engine_in_thread.iteration_sleep * 2
+        time.sleep(iteration_sleep)
         callback_mock.assert_not_called()
 
         # Change button state to pressed, wait for an update => event should not
         # be raised yet (it is when button is released).
         pressed = True
-        await asyncio.sleep(0.1)
+        press_time = time.time()
+        await asyncio.sleep(iteration_sleep)
         assert button.pressed
         callback_mock.assert_not_called()
 
-        # Release button => event should be called once.
+        # Release button => event should not be called until double click
+        # timeout is reached.
         pressed = False
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(button.double_click_timeout - time.time() + press_time)
         assert not button.pressed
+        callback_mock.assert_not_called()
+
+        # Now double click timeout has been reached, click should happen.
+        await asyncio.sleep(iteration_sleep)
         callback_mock.assert_called_once_with(button)
 
         # Click again. Event handler should be called immediately, even though
         # the first execution is still running.
         callback_mock.reset_mock()
         pressed = True
-        await asyncio.sleep(0.05)
+        press_time = time.time()
+        await asyncio.sleep(iteration_sleep)
         pressed = False
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(button.double_click_timeout - time.time() + press_time + iteration_sleep)
         assert not button.pressed
         callback_mock.assert_called_once_with(button)

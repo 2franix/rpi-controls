@@ -52,7 +52,6 @@ class Engine:
         # https://stackoverflow.com/a/51647591
         self._event_loop.call_soon_threadsafe(self._event_loop.stop)
 
-
     def run_in_thread(self) -> None:
         thread = threading.Thread(target=self.run)
         thread.start()
@@ -91,15 +90,27 @@ class Button:
     EventHandlerList = List[EventHandler]
 
     def __init__(self, pin_id: int, engine: Engine):
-        self._me: Button = self
         assert engine, "No engine."
         self._engine = engine
         self.pin_id = pin_id
         self._pressed: bool = False
+        self._long_pressed: bool = False
+        self._press_handlers: Button.EventHandlerList = []
+        self._release_handlers: Button.EventHandlerList = []
+        self._long_press_handlers: Button.EventHandlerList = []
         self._click_handlers: Button.EventHandlerList = []
         self._double_click_handlers: Button.EventHandlerList = []
         self._engine.configure_button(self.pin_id)
-        self._events: List[str] = []
+        # Maximum elapsed seconds between a press and the second release to qualify
+        # for a double click.
+        self.double_click_timeout: float = 0.4
+        # Number of seconds a press must be maintained to qualify as a long
+        # press.
+        self.long_press_timeout: float = 0.5
+        # Timestamps of previous presses.
+        self._press_times: List[float] = []
+        # Do initial update to capture initial button state without raising
+        # events.
         self.update(None)
 
     @property
@@ -108,14 +119,51 @@ class Button:
 
     def update(self, event_loop) -> List[concurrent.futures.Future]:
         assert threading.current_thread() != self._engine._event_loop_thread
+        was_pressed = self._pressed
+        was_long_pressed = self._long_pressed
         new_pressed = self._engine.driver.is_button_pressed(self.pin_id)
-        raise_event = self._pressed != new_pressed and not event_loop is None
         self._pressed = new_pressed
-        if raise_event:
-            if not self.pressed:
-                return [asyncio.run_coroutine_threadsafe(handler(self), event_loop) for handler in self._click_handlers]
-                # event_loop.call_soon_threadsafe(lambda: event_loop.create_task(handler(self)))
-        return []
+        if not self._pressed: self._long_pressed = False
+        current_time: float = time.time()
+
+        event_futures: List[concurrent.futures.Future] = []
+        if self._pressed and not was_pressed: # PRESS
+            # Record time of this new press.
+            self._press_times.append(current_time)
+            self.raise_event(event_loop, self._press_handlers, event_futures)
+        elif not self._pressed and was_pressed: # RELEASE
+            self.raise_event(event_loop, self._release_handlers, event_futures)
+
+        # Maybe raise 'long press' event?
+        if self._pressed: # LONG_PRESS
+            last_press_time: float = self._press_times[-1]
+            if (not self._long_pressed # Raise event only once per press!
+                and current_time - last_press_time > self.long_press_timeout): # Press lasted long enough?
+                self._long_pressed = True
+                self.raise_event(event_loop, self._long_press_handlers, event_futures)
+
+        # Maybe raise 'double click' event?
+        if (not self._pressed and was_pressed # DOUBLE_CLICK
+            and len(self._press_times) >= 2 # Was pressed not long ago.
+            and current_time - self._press_times[-2] < self.double_click_timeout): # First of two presses was not too long ago.
+            self.raise_event(event_loop, self._double_click_handlers, event_futures)
+            # Consume press times not to reuse them in further events.
+            self._press_times.clear()
+
+        # Maybe raise 'click' event?
+        if (not self._pressed # CLICK
+            and self._press_times # Release but was pressed not long ago.
+            and current_time - self._press_times[-1] >= self.double_click_timeout): # Last press cannot qualify as a double click anymore.
+            self.raise_event(event_loop, self._click_handlers, event_futures)
+            # Consume press times not to reuse them in further events.
+            self._press_times.clear()
+
+        return event_futures
+
+    def raise_event(self, event_loop, handlers: EventHandlerList, event_futures: List[concurrent.futures.Future]) -> None:
+        if event_loop is None: return
+        event_futures += [asyncio.run_coroutine_threadsafe(handler(self), event_loop) for handler in handlers]
+        # event_loop.call_soon_threadsafe(lambda: event_loop.create_task(handler(self)))
 
     def add_on_click(self, func: EventHandler) -> None:
         self._click_handlers.append(func)
