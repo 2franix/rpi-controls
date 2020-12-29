@@ -60,17 +60,10 @@ class TestController:
         assert button10.pressed
         assert button11.pressed
 
+
     @pytest.mark.asyncio
     @pytest.mark.timeout(7)
-    async def test_on_click_event(self, engine_in_thread: controller.Engine) -> None:
-        # Prepare a mocked event handler.
-        callback_mock = MagicMock()
-        async def event_callback_mock(button: controller.Button) -> None:
-            callback_mock(button)
-            # Make callback last a little more. Allows to exercise concurrent
-            # event calls and graceful final stop.
-            await asyncio.sleep(2)
-
+    async def test_press_release_click_events(self, engine_in_thread: controller.Engine) -> None:
         # Setup mocked GPIO driver.
         pressed: bool = False
         driver: typing.Any = engine_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
@@ -78,12 +71,12 @@ class TestController:
 
         # Create a button and subscribe to its click event.
         button: controller.Button = engine_in_thread.make_button(2)
-        button.add_on_click(event_callback_mock)
+        listener = ButtonListener(button)
 
         # Give the engine some time to update. Event should not be raised.
         iteration_sleep = engine_in_thread.iteration_sleep * 2
         time.sleep(iteration_sleep)
-        callback_mock.assert_not_called()
+        listener.assert_calls()
 
         # Change button state to pressed, wait for an update => event should not
         # be raised yet (it is when button is released).
@@ -91,26 +84,80 @@ class TestController:
         press_time = time.time()
         await asyncio.sleep(iteration_sleep)
         assert button.pressed
-        callback_mock.assert_not_called()
+        listener.assert_calls(press = 1)
 
         # Release button => event should not be called until double click
         # timeout is reached.
         pressed = False
         await asyncio.sleep(button.double_click_timeout - time.time() + press_time)
         assert not button.pressed
-        callback_mock.assert_not_called()
+        listener.assert_calls(press = 1, release = 1)
 
         # Now double click timeout has been reached, click should happen.
         await asyncio.sleep(iteration_sleep)
-        callback_mock.assert_called_once_with(button)
+        listener.assert_calls(press = 1, release = 1, click = 1)
 
         # Click again. Event handler should be called immediately, even though
         # the first execution is still running.
-        callback_mock.reset_mock()
         pressed = True
         press_time = time.time()
         await asyncio.sleep(iteration_sleep)
         pressed = False
         await asyncio.sleep(button.double_click_timeout - time.time() + press_time + iteration_sleep)
         assert not button.pressed
-        callback_mock.assert_called_once_with(button)
+        listener.assert_calls(press = 2, release = 2, click = 2)
+
+class ButtonListener:
+    def __init__(self, button: controller.Button):
+        assert not button is None
+        self.button: controller.Button = button
+        self.press_call_count: int = 0
+        self.long_press_call_count: int = 0
+        self.release_call_count: int = 0
+        self.click_call_count: int = 0
+        self.double_click_call_count: int = 0
+        self.button.add_on_press(self.on_press)
+        self.button.add_on_long_press(self.on_long_press)
+        self.button.add_on_release(self.on_release)
+        self.button.add_on_click(self.on_click)
+        self.button.add_on_double_click(self.on_double_click)
+
+    async def _common_event_handler(self):
+        await asyncio.sleep(2)
+
+    async def on_press(self, button: controller.Button) -> None:
+        assert button == self.button
+        assert button.pressed
+        self.press_call_count += 1
+        await self._common_event_handler()
+
+    async def on_long_press(self, button: controller.Button) -> None:
+        assert button == self.button
+        assert button.pressed
+        assert button.long_pressed
+        self.long_press_call_count += 1
+        await self._common_event_handler()
+
+    async def on_release(self, button: controller.Button) -> None:
+        assert button == self.button
+        assert not button.pressed
+        assert not button.long_pressed
+        self.release_call_count += 1
+        await self._common_event_handler()
+
+    async def on_click(self, button: controller.Button) -> None:
+        assert button == self.button
+        self.click_call_count += 1
+        await self._common_event_handler()
+
+    async def on_double_click(self, button: controller.Button) -> None:
+        assert button == self.button
+        self.double_click_call_count += 1
+        await self._common_event_handler()
+
+    def assert_calls(self, press: int = 0, long_press: int = 0, release: int = 0, click: int = 0, double_click: int = 0):
+        assert self.press_call_count == press
+        assert self.long_press_call_count == long_press
+        assert self.release_call_count == release
+        assert self.click_call_count == click
+        assert self.double_click_call_count == double_click
