@@ -6,6 +6,7 @@ import threading
 import subprocess
 import signal
 import asyncio
+import concurrent.futures
 import os
 from typing import Callable, Coroutine, List, Type, Any
 from . import gpio_driver
@@ -26,20 +27,31 @@ class Engine:
         self.driver: gpio_driver.GpioDriver = driver
         self._buttons: List[Button] = []
         self.iteration_sleep: float = 0.01
+        self._lock: threading.Lock = threading.Lock()
         self._is_stopping = False
         # Thread that actually executes event handlers.
         self._event_loop = asyncio.new_event_loop()
         self._event_loop_thread: threading.Thread = threading.Thread(target=self._event_loop.run_forever)
+        self._running_event_handlers: List[concurrent.futures.Future] = []
 
     def make_button(self, pin_id) -> Button:
         button = Button(pin_id, self)
         self._buttons.append(button)
         return button
 
-    def stop(self) -> None:
-        self._is_stopping = True
+    def stop(self, kills_running_events: bool = False) -> None:
+        with self._lock:
+            self._is_stopping = True
+
+        # Wait for any event handlers to complete.
+        if not kills_running_events:
+            for future in self._running_event_handlers:
+                future.result()
+
+        # Request the event loop to stop (so will end its thread).
         # https://stackoverflow.com/a/51647591
         self._event_loop.call_soon_threadsafe(self._event_loop.stop)
+
 
     def run_in_thread(self) -> None:
         thread = threading.Thread(target=self.run)
@@ -51,12 +63,25 @@ class Engine:
         Keyword arguments:
         should_stop -- function evaluated at the end of every iteration to determine if the mainloop should break.
         """
-        self._is_stopping = False
+        # Already stopping or stopped.
+        if self._is_stopping:
+            return
+
         self._event_loop_thread.start()
-        while not self._is_stopping:
-            for button in self._buttons:
-                button.update(self._event_loop)
-            time.sleep(self.iteration_sleep)
+        while True:
+            with self._lock:
+                # Exit GPIO monitoring loop as soon as stop is requested.
+                if self._is_stopping: return
+                # Clean up old event tasks.
+                for complete_event in [future for future in self._running_event_handlers if future.done()]:
+                    self._running_event_handlers.remove(complete_event)
+                # Maybe raise new events. Make sure the engine cannot stop in
+                # the meantime.
+                for button in self._buttons:
+                    event_futures: List[concurrent.futures.Future] = button.update(self._event_loop)
+                    self._running_event_handlers += event_futures
+
+            if not self._is_stopping: time.sleep(self.iteration_sleep)
 
     def configure_button(self, pin_id: int) -> None:
         self.driver.configure_button(pin_id)
@@ -81,15 +106,16 @@ class Button:
     def pressed(self) -> bool:
         return self._pressed
 
-    def update(self, event_loop) -> None:
+    def update(self, event_loop) -> List[concurrent.futures.Future]:
         assert threading.current_thread() != self._engine._event_loop_thread
         new_pressed = self._engine.driver.is_button_pressed(self.pin_id)
         raise_event = self._pressed != new_pressed and not event_loop is None
         self._pressed = new_pressed
         if raise_event:
             if not self.pressed:
-                for handler in self._click_handlers:
-                    event_loop.call_soon_threadsafe(lambda: event_loop.create_task(handler(self)))
+                return [asyncio.run_coroutine_threadsafe(handler(self), event_loop) for handler in self._click_handlers]
+                # event_loop.call_soon_threadsafe(lambda: event_loop.create_task(handler(self)))
+        return []
 
     def add_on_click(self, func: EventHandler) -> None:
         self._click_handlers.append(func)

@@ -11,15 +11,15 @@ import typing
 
 class TestController:
     @pytest.fixture
-    def gpio_driver(self) -> gpio_driver.GpioDriver:
+    def gpio_driver_mock(self) -> gpio_driver.GpioDriver:
         return MagicMock(spec=gpio_driver.GpioDriver)
 
     @pytest.fixture
-    def engine(self, gpio_driver) -> controller.Engine:
-        return controller.Engine(gpio_driver)
+    def engine(self, gpio_driver_mock: gpio_driver.GpioDriver) -> controller.Engine:
+        return controller.Engine(gpio_driver_mock)
 
     @pytest.fixture
-    def engine_in_thread(self, engine) -> typing.Generator[controller.Engine, None, None]:
+    def engine_in_thread(self, engine: controller.Engine) -> typing.Generator[controller.Engine, None, None]:
         engine.run_in_thread()
         yield engine
         engine.stop()
@@ -62,15 +62,19 @@ class TestController:
 
     @pytest.mark.asyncio
     @pytest.mark.timeout(7)
-    async def test_on_click_event(self, engine_in_thread) -> None:
+    async def test_on_click_event(self, engine_in_thread: controller.Engine) -> None:
         # Prepare a mocked event handler.
         callback_mock = MagicMock()
         async def event_callback_mock(button: controller.Button) -> None:
             callback_mock(button)
+            # Make callback last a little more. Allows to exercise concurrent
+            # event calls and graceful final stop.
+            await asyncio.sleep(1)
 
         # Setup mocked GPIO driver.
         pressed: bool = False
-        engine_in_thread.driver.is_button_pressed = lambda pin_id: pressed
+        driver: typing.Any = engine_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
+        driver.is_button_pressed = lambda pin_id: pressed
 
         # Create a button and subscribe to its click event.
         button: controller.Button = engine_in_thread.make_button(2)
@@ -83,12 +87,22 @@ class TestController:
         # Change button state to pressed, wait for an update => event should not
         # be raised yet (it is when button is released).
         pressed = True
-        time.sleep(0.1)
+        await asyncio.sleep(0.1)
         assert button.pressed
         callback_mock.assert_not_called()
 
         # Release button => event should be called once.
         pressed = False
-        time.sleep(0.1)
+        await asyncio.sleep(0.1)
+        assert not button.pressed
+        callback_mock.assert_called_once_with(button)
+
+        # Click again. Event handler should be called immediately, even though
+        # the first execution is still running.
+        callback_mock.reset_mock()
+        pressed = True
+        await asyncio.sleep(0.05)
+        pressed = False
+        await asyncio.sleep(0.05)
         assert not button.pressed
         callback_mock.assert_called_once_with(button)
