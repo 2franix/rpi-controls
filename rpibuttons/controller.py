@@ -20,41 +20,43 @@ class Engine:
         """Initializes a new instance of the engine controlling the GPIO.
 
         Keyword arguments:
-        driver -- object abstracting accessing to the GPIO.
+        driver -- object abstracting access to the GPIO.
         iteration_sleep -- pause in seconds before entering the next iteration of the mainloop.
         """
         self.driver: gpio_driver.GpioDriver = driver
         self._buttons: List[Button] = []
         self.iteration_sleep: float = 0.01
+        self._is_stopping = False
+        # Thread that actually executes event handlers.
+        self._event_loop = asyncio.new_event_loop()
+        self._event_loop_thread: threading.Thread = threading.Thread(target=self._event_loop.run_forever)
 
     def make_button(self, pin_id) -> Button:
         button = Button(pin_id, self)
         self._buttons.append(button)
         return button
 
-    def run_in_thread(self, should_stop: Callable[[], bool]) -> None:
-        def invoke_run():
-            asyncio.run(self.run_async(should_stop))
-        thread = threading.Thread(target=invoke_run)
+    def stop(self) -> None:
+        self._is_stopping = True
+        # https://stackoverflow.com/a/51647591
+        self._event_loop.call_soon_threadsafe(self._event_loop.stop)
+
+    def run_in_thread(self) -> None:
+        thread = threading.Thread(target=self.run)
         thread.start()
 
-    async def run_async(self, should_stop: Callable[[], bool]) -> None:
+    def run(self) -> None:
         """Runs the engine controlling the GPIO.
 
         Keyword arguments:
         should_stop -- function evaluated at the end of every iteration to determine if the mainloop should break.
         """
-        while not await self._run_iteration(should_stop):
-            await asyncio.sleep(self.iteration_sleep)
-
-    async def _run_iteration(self, should_stop: Callable[[], bool]) -> bool:
-        if not should_stop():
+        self._is_stopping = False
+        self._event_loop_thread.start()
+        while not self._is_stopping:
             for button in self._buttons:
-                events: List[asyncio.Task] = button.update_pressed()
-                await asyncio.gather(*events)
-            return False
-        else:
-            return True
+                button.update(self._event_loop)
+            time.sleep(self.iteration_sleep)
 
     def configure_button(self, pin_id: int) -> None:
         self.driver.configure_button(pin_id)
@@ -72,24 +74,22 @@ class Button:
         self._click_handlers: Button.EventHandlerList = []
         self._double_click_handlers: Button.EventHandlerList = []
         self._engine.configure_button(self.pin_id)
-        self.update_pressed()
+        self._events: List[str] = []
+        self.update(None)
 
     @property
     def pressed(self) -> bool:
         return self._pressed
 
-    def update_pressed(self) -> List[asyncio.Task]:
+    def update(self, event_loop) -> None:
+        assert threading.current_thread() != self._engine._event_loop_thread
         new_pressed = self._engine.driver.is_button_pressed(self.pin_id)
-        raise_event = self._pressed != new_pressed
+        raise_event = self._pressed != new_pressed and not event_loop is None
         self._pressed = new_pressed
-        events: List[asyncio.Task] = []
         if raise_event:
             if not self.pressed:
-                events.append(asyncio.create_task(self.raise_event(self._click_handlers)))
-        return events
-
-    async def raise_event(self, handlers: EventHandlerList) -> None:
-        await asyncio.gather(*(handler(self) for handler in self._click_handlers))
+                for handler in self._click_handlers:
+                    event_loop.call_soon_threadsafe(lambda: event_loop.create_task(handler(self)))
 
     def add_on_click(self, func: EventHandler) -> None:
         self._click_handlers.append(func)
