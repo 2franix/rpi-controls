@@ -13,3 +13,6 @@ tags
 
 # Tox virtual envs
 .tox/
+
+# Vim swap files
+*.sw?
