@@ -69,7 +69,7 @@ class TestController:
         driver: typing.Any = engine_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
         driver.is_button_pressed = lambda pin_id: pressed
 
-        # Create a button and subscribe to its click event.
+        # Create a button and subscribe to its events.
         button: controller.Button = engine_in_thread.make_button(2)
         listener = ButtonListener(button)
 
@@ -78,7 +78,7 @@ class TestController:
         time.sleep(iteration_sleep)
         listener.assert_calls()
 
-        # Change button state to pressed, wait for an update => event should not
+        # Change button state to pressed, wait for an update => click event should not
         # be raised yet (it is when button is released).
         pressed = True
         press_time = time.time()
@@ -106,6 +106,42 @@ class TestController:
         await asyncio.sleep(button.double_click_timeout - time.time() + press_time + iteration_sleep)
         assert not button.pressed
         listener.assert_calls(press = 2, release = 2, click = 2)
+
+    @pytest.mark.asyncio
+    @pytest.mark.timeout(7)
+    async def test_long_press_double_click_events(self, engine_in_thread: controller.Engine) -> None:
+        # Setup mocked GPIO driver.
+        pressed: bool = False
+        driver: typing.Any = engine_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
+        driver.is_button_pressed = lambda pin_id: pressed
+
+        # Create a button and subscribe to its click event.
+        button: controller.Button = engine_in_thread.make_button(2)
+        button.long_press_timeout = 0.4
+        button.double_click_timeout = 0.3
+        listener = ButtonListener(button)
+
+        # Give the engine some time to update. Event should not be raised.
+        iteration_sleep = engine_in_thread.iteration_sleep * 2
+        time.sleep(iteration_sleep)
+        listener.assert_calls()
+
+        # Change button state to pressed and wait for long press.
+        pressed = True
+        press_time = time.time()
+        await asyncio.sleep(button.long_press_timeout + iteration_sleep)
+        assert button.pressed
+        assert button.long_pressed
+        listener.assert_calls(press = 1, long_press = 1)
+
+        # Release button, click event should be raised immediately since
+        # the double click timeout has been reached (it's too late to hope for a
+        # double click).
+        pressed = False
+        await asyncio.sleep(iteration_sleep)
+        assert not button.pressed
+        assert not button.long_pressed
+        listener.assert_calls(press = 1, long_press = 1, release = 1, click = 1)
 
 class ButtonListener:
     def __init__(self, button: controller.Button):
