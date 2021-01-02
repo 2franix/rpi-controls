@@ -16,7 +16,7 @@ status = 'off'
 stopped = False
 buttonPressedRisingEdgeTimestamp = None # Timestamp of the last button pressed event.
 
-class Engine:
+class Controller:
     def __init__(self, driver: gpio_driver.GpioDriver, iteration_sleep=0.01):
         """Initializes a new instance of the engine controlling the GPIO.
 
@@ -74,7 +74,7 @@ class Engine:
                 # Clean up old event tasks.
                 for complete_event in [future for future in self._running_event_handlers if future.done()]:
                     self._running_event_handlers.remove(complete_event)
-                # Maybe raise new events. Make sure the engine cannot stop in
+                # Maybe raise new events. Make sure the controller cannot stop in
                 # the meantime.
                 for button in self._buttons:
                     event_futures: List[concurrent.futures.Future] = button.update(self._event_loop)
@@ -89,9 +89,9 @@ class Button:
     EventHandler = Callable[['Button'], Coroutine[Any, Any, Any]]
     EventHandlerList = List[EventHandler]
 
-    def __init__(self, pin_id: int, engine: Engine):
-        assert engine, "No engine."
-        self._engine = engine
+    def __init__(self, pin_id: int, controller: Controller):
+        assert controller, "No controller."
+        self._controller = controller
         self.pin_id = pin_id
         self._pressed: bool = False
         self._long_pressed: bool = False
@@ -100,7 +100,7 @@ class Button:
         self._long_press_handlers: Button.EventHandlerList = []
         self._click_handlers: Button.EventHandlerList = []
         self._double_click_handlers: Button.EventHandlerList = []
-        self._engine.configure_button(self.pin_id)
+        self._controller.configure_button(self.pin_id)
         # Maximum elapsed seconds between a press and the second release to qualify
         # for a double click.
         self.double_click_timeout: float = 0.4
@@ -123,10 +123,10 @@ class Button:
         return self._long_pressed
 
     def update(self, event_loop) -> List[concurrent.futures.Future]:
-        assert threading.current_thread() != self._engine._event_loop_thread
+        assert threading.current_thread() != self._controller._event_loop_thread
         was_pressed = self._pressed
         was_long_pressed = self._long_pressed
-        new_pressed = self._engine.driver.is_button_pressed(self.pin_id)
+        new_pressed = self._controller.driver.is_button_pressed(self.pin_id)
         self._pressed = new_pressed
         if not self._pressed: self._long_pressed = False
         current_time: float = time.time()

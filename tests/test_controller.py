@@ -15,29 +15,29 @@ class TestController:
         return MagicMock(spec=gpio_driver.GpioDriver)
 
     @pytest.fixture
-    def engine(self, gpio_driver_mock: gpio_driver.GpioDriver) -> controller.Engine:
-        return controller.Engine(gpio_driver_mock)
+    def contrller(self, gpio_driver_mock: gpio_driver.GpioDriver) -> controller.Controller:
+        return controller.Controller(gpio_driver_mock)
 
     @pytest.fixture
-    def engine_in_thread(self, engine: controller.Engine) -> Generator[controller.Engine, None, None]:
-        engine.run_in_thread()
-        yield engine
-        engine.stop()
+    def controller_in_thread(self, contrller: controller.Controller) -> Generator[controller.Controller, None, None]:
+        contrller.run_in_thread()
+        yield contrller
+        contrller.stop()
 
-    def test_button_configuration(self, engine) -> None:
+    def test_button_configuration(self, contrller) -> None:
         """Checks the GPIO driver is used to configure a new button."""
-        button = engine.make_button(12)
-        engine.driver.configure_button.assert_called_once_with(12)
+        button = contrller.make_button(12)
+        contrller.driver.configure_button.assert_called_once_with(12)
 
-    def test_button_update(self, engine_in_thread) -> None:
+    def test_button_update(self, controller_in_thread) -> None:
         """Checks that buttons update their pressed state as expected."""
         # Mock the GPIO for button pressed status.
         button_states = {10: False, 11: False}
-        engine_in_thread.driver.is_button_pressed = MagicMock(side_effect=lambda pin_id: button_states[pin_id])
+        controller_in_thread.driver.is_button_pressed = MagicMock(side_effect=lambda pin_id: button_states[pin_id])
 
         # Create two buttons.
-        button10 = engine_in_thread.make_button(10)
-        button11 = engine_in_thread.make_button(11)
+        button10 = controller_in_thread.make_button(10)
+        button11 = controller_in_thread .make_button(11)
 
         # According to our GPIO mock, they should not be 'pressed'.
         assert not button10.pressed
@@ -46,7 +46,7 @@ class TestController:
         # Alter mock so that first button should now be pressed.
         button_states[10] = True
 
-        # Give some time for the engine to update.
+        # Give some time for the controller to update.
         time.sleep(0.1)
 
         # Check pressed state again.
@@ -63,18 +63,18 @@ class TestController:
 
     @pytest.mark.asyncio
     @pytest.mark.timeout(7)
-    async def test_press_release_click_events(self, engine_in_thread: controller.Engine) -> None:
+    async def test_press_release_click_events(self, controller_in_thread: controller.Controller) -> None:
         # Setup mocked GPIO driver.
         pressed: bool = False
-        driver: Any = engine_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
         driver.is_button_pressed = lambda pin_id: pressed
 
         # Create a button and subscribe to its events.
-        button: controller.Button = engine_in_thread.make_button(2)
+        button: controller.Button = controller_in_thread.make_button(2)
         listener = ButtonListener(button)
 
-        # Give the engine some time to update. Event should not be raised.
-        iteration_sleep = engine_in_thread.iteration_sleep * 2
+        # Give the controller some time to update. Event should not be raised.
+        iteration_sleep = controller_in_thread.iteration_sleep * 2
         time.sleep(iteration_sleep)
         listener.assert_calls()
 
@@ -109,21 +109,21 @@ class TestController:
 
     @pytest.mark.asyncio
     @pytest.mark.timeout(7)
-    async def test_long_press_double_click_events(self, engine_in_thread: controller.Engine) -> None:
+    async def test_long_press_double_click_events(self, controller_in_thread: controller.Controller) -> None:
         # Setup mocked GPIO driver.
         pressed: bool = False
-        driver: Any = engine_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
         driver.is_button_pressed = lambda pin_id: pressed
 
         # Create a button and subscribe to its click event.
-        button: controller.Button = engine_in_thread.make_button(2)
+        button: controller.Button = controller_in_thread.make_button(2)
         button.long_press_timeout = 0.4
         button.double_click_timeout = 0.3
         async def nothing(): pass
         listener = ButtonListener(button, nothing)
 
-        # Give the engine some time to update. Event should not be raised.
-        iteration_sleep = engine_in_thread.iteration_sleep * 2
+        # Give the controller some time to update. Event should not be raised.
+        iteration_sleep = controller_in_thread.iteration_sleep * 2
         time.sleep(iteration_sleep)
         listener.assert_calls()
 

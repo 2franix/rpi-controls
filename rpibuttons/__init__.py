@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
 
-def start_controller():
-    print("Nothing is done for now!")
-    raise Exception("Not implemented.")
+from . import controller, gpio_driver
+
+def make_controller(gpio_driver: gpio_driver.GpioDriver = None) -> controller.Controller:
+    if not gpio_driver:
+        from . import rpi_gpio_driver
+        gpio_driver = rpi_gpio_driver.RpiGpioDriver()
+    return controller.Controller(gpio_driver)
