@@ -9,7 +9,7 @@ import asyncio
 import concurrent.futures
 import inspect
 import os
-from typing import cast, Callable, Coroutine, List, Type, Any, Union, Awaitable
+from typing import cast, Callable, Coroutine, List, Iterable, Type, Any, Union, Awaitable
 from . import gpio_driver
 import threading
 
@@ -51,13 +51,17 @@ class Controller:
         return button
 
     def stop(self, kills_running_events: bool = False) -> None:
+        asyncio.run(self.stop_async(kills_running_events))
+
+    async def stop_async(self, kills_running_events: bool = False) -> None:
         with self._lock:
             self._is_stopping = True
 
         # Wait for any event handlers to complete.
         if not kills_running_events:
-            for future in self._running_event_handlers:
-                future.result()
+            # Convert concurrent futures to asyncio ones. Can be done here since
+            # we are in an async event loop.
+            await asyncio.gather(*[asyncio.wrap_future(handler_future) for handler_future in self._running_event_handlers])
 
         # Request the event loop to stop (so will end its thread).
         # https://stackoverflow.com/a/51647591
