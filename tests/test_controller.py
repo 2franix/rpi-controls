@@ -48,17 +48,17 @@ class TestController:
         """Checks that buttons update their pressed state as expected."""
         # Mock the GPIO for button pressed status.
         button_states = {10: False, 11: False}
-        controller_in_thread.driver.is_button_pressed = MagicMock(side_effect=lambda pin_id: button_states[pin_id])
+        controller_in_thread.driver.input = MagicMock(side_effect=lambda pin_id: button_states[pin_id])
 
         # Create two buttons.
         button10 = controller_in_thread.make_button(10)
-        button11 = controller_in_thread .make_button(11)
+        button11 = controller_in_thread .make_button(11, contact_type = controller.ContactType.NORMALLY_CLOSED)
 
-        # According to our GPIO mock, they should not be 'pressed'.
-        assert not button10.pressed
-        assert not button11.pressed
+        # According to our GPIO mock, their GPIO pins are not active.
+        assert not button10.pressed # Normally open.
+        assert button11.pressed # Normally closed.
 
-        # Alter mock so that first button should now be pressed.
+        # Alter mock so that pin of first button is now active.
         button_states[10] = True
 
         # Give some time for the controller to update.
@@ -66,14 +66,14 @@ class TestController:
 
         # Check pressed state again.
         assert button10.pressed
-        assert not button11.pressed
+        assert button11.pressed # Normally closed.
 
-        # Alter mock once again so that all buttons are pressed and wait for
+        # Alter mock once again so that both pins are active and wait for
         # update. Last, check button states.
         button_states[11] = True
         time.sleep(0.1)
         assert button10.pressed
-        assert button11.pressed
+        assert not button11.pressed
 
     @pytest.mark.asyncio
     @pytest.mark.timeout(5)
@@ -98,8 +98,8 @@ class TestController:
     def test_press_release_click_events(self, controller_in_thread: controller.Controller) -> None:
         # Setup mocked GPIO driver.
         pressed: bool = False
-        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
-        driver.is_button_pressed = lambda pin_id: pressed
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+        driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its events.
         button: controller.Button = controller_in_thread.make_button(2)
@@ -145,8 +145,8 @@ class TestController:
     def test_long_press_double_click_events(self, controller_in_thread: controller.Controller) -> None:
         # Setup mocked GPIO driver.
         pressed: bool = False
-        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
-        driver.is_button_pressed = lambda pin_id: pressed
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+        driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its click event.
         button: controller.Button = controller_in_thread.make_button(2)
@@ -189,8 +189,8 @@ class TestController:
 
         # Setup mocked GPIO driver.
         pressed: bool = False
-        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
-        driver.is_button_pressed = lambda pin_id: pressed
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+        driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its events.
         button: controller.Button = controller_in_thread.make_button(2)
@@ -218,8 +218,8 @@ class TestController:
 
         # Setup mocked GPIO driver.
         pressed: bool = False
-        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
-        driver.is_button_pressed = lambda pin_id: pressed
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+        driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its events.
         button: controller.Button = controller_in_thread.make_button(2)
@@ -247,12 +247,12 @@ class TestController:
     @pytest.mark.asyncio
     @pytest.mark.timeout(5)
     async def test_gpio_changes_when_controller_is_stopped(self, controller_in_thread: controller.Controller) -> None:
-        """Makes sure the no events are raised after the controller has been stopping."""
+        """Makes sure no events are raised after the controller has been stopping."""
 
         # Setup mocked GPIO driver.
         pressed: bool = False
-        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
-        driver.is_button_pressed = lambda pin_id: pressed
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+        driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its events.
         button: controller.Button = controller_in_thread.make_button(2)

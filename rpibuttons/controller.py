@@ -17,6 +17,10 @@ import threading
 
 def get_logger(): return logging.getLogger(__name__)
 
+class ContactType(enum.Enum):
+    NORMALLY_CLOSED = 'NC'
+    NORMALLY_OPEN = 'NO'
+
 class Controller:
     class Status(enum.Enum):
         READY: str = "ready"
@@ -46,8 +50,8 @@ class Controller:
     def status(self) -> Controller.Status:
         return self._status
 
-    def make_button(self, pin_id: int, name: typing.Optional[str] = None) -> Button:
-        button = Button(pin_id, name)
+    def make_button(self, pin_id: int, name: typing.Optional[str] = None, contact_type: ContactType = ContactType.NORMALLY_OPEN) -> Button:
+        button = Button(pin_id, name, contact_type)
         self.driver.configure_button(pin_id)
         get_logger().debug(f'New button configured for pin {pin_id}')
 
@@ -143,9 +147,10 @@ class Button:
     EventHandler = typing.Union[SyncEventHandler, AsyncEventHandler]
     EventHandlerList = typing.List[EventHandler]
 
-    def __init__(self, pin_id: int, name: typing.Optional[str]):
+    def __init__(self, pin_id: int, name: typing.Optional[str], contact_type: ContactType):
         self._pin_id: int = pin_id
         self._name: str = name or f'button for pin {pin_id}'
+        self._contact_type: ContactType = contact_type
         self._pressed: bool = False
         self._long_pressed: bool = False
         self._press_handlers: Button.EventHandlerList = []
@@ -172,6 +177,10 @@ class Button:
         return self._name
 
     @property
+    def type(self) -> ContactType:
+        return self._contact_type
+
+    @property
     def pressed(self) -> bool:
         return self._pressed
 
@@ -180,9 +189,10 @@ class Button:
         return self._long_pressed
 
     def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], gpio_driver: gpio_driver.GpioDriver) -> typing.List[concurrent.futures.Future]:
-        was_pressed = self._pressed
-        was_long_pressed = self._long_pressed
-        new_pressed = gpio_driver.is_button_pressed(self.pin_id)
+        was_pressed: bool = self._pressed
+        was_long_pressed: bool = self._long_pressed
+        pin_input: bool = gpio_driver.input(self.pin_id)
+        new_pressed: bool = pin_input if self._contact_type == ContactType.NORMALLY_OPEN else not pin_input
         self._pressed = new_pressed
         if not self._pressed: self._long_pressed = False
         current_time: float = time.time()
