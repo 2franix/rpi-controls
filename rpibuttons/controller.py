@@ -9,15 +9,18 @@ import asyncio
 import concurrent.futures
 import inspect
 import os
-from typing import cast, Callable, Coroutine, List, Iterable, Type, Any, Union, Awaitable
+import enum
+import typing
 from . import gpio_driver
 import threading
 
-status = 'off'
-stopped = False
-buttonPressedRisingEdgeTimestamp = None # Timestamp of the last button pressed event.
-
 class Controller:
+    class Status(enum.Enum):
+        READY: str = "ready"
+        RUNNING: str = "running"
+        STOPPING: str = "stopping"
+        STOPPED: str = "stopped"
+
     def __init__(self, driver: gpio_driver.GpioDriver, iteration_sleep=0.01):
         """Initializes a new instance of the engine controlling the GPIO.
 
@@ -26,20 +29,20 @@ class Controller:
         iteration_sleep -- pause in seconds before entering the next iteration of the mainloop.
         """
         self.driver: gpio_driver.GpioDriver = driver
-        self._buttons: List[Button] = []
+        self._buttons: typing.List[Button] = []
         self.iteration_sleep: float = 0.01
-        self._lock: threading.Lock = threading.Lock()
-        self._is_stopping = False
+        self._status_lock: threading.Lock = threading.Lock()
+        self._status: Controller.Status = Controller.Status.READY
         # Thread that actually executes event handlers.
-        self._event_loop = asyncio.new_event_loop()
+        self._event_loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
         self._event_loop_thread: threading.Thread = threading.Thread(target=self._event_loop.run_forever)
-        self._running_event_handlers: List[concurrent.futures.Future] = []
+        self._running_event_handlers: typing.List[concurrent.futures.Future] = []
 
     @property
-    def is_stopping(self):
-        return self._is_stopping
+    def status(self) -> Controller.Status:
+        return self._status
 
-    def make_button(self, pin_id) -> Button:
+    def make_button(self, pin_id: int) -> Button:
         button = Button(pin_id)
         self.driver.configure_button(pin_id)
 
@@ -54,8 +57,15 @@ class Controller:
         asyncio.run(self.stop_async(kills_running_events))
 
     async def stop_async(self, kills_running_events: bool = False) -> None:
-        with self._lock:
-            self._is_stopping = True
+        with self._status_lock:
+            # Stopping while already in the midst of stopping is probably a mistake from caller.
+            # Let's raise an exception.
+            if self.status == Controller.Status.STOPPING: raise Exception(f'Controller is already stopping.')
+
+            # Otherwise, let's support unnecessary stop attempts (such as when
+            # already at full stop).
+            if self.status != Controller.Status.RUNNING: return
+            self._status = Controller.Status.STOPPING
 
         # Wait for any event handlers to complete.
         if not kills_running_events:
@@ -66,6 +76,10 @@ class Controller:
         # Request the event loop to stop (so will end its thread).
         # https://stackoverflow.com/a/51647591
         self._event_loop.call_soon_threadsafe(self._event_loop.stop)
+        while self._event_loop.is_running():
+            await asyncio.sleep(0.010)
+        with self._status_lock:
+            self._status = Controller.Status.STOPPED
 
     def run_in_thread(self) -> None:
         thread = threading.Thread(target=self.run)
@@ -77,34 +91,36 @@ class Controller:
         Keyword arguments:
         should_stop -- function evaluated at the end of every iteration to determine if the mainloop should break.
         """
-        # Already stopping or stopped.
-        if self._is_stopping:
-            return
+        with self._status_lock:
+            # Already running or stopping.
+            if self._status != Controller.Status.READY: raise Exception(f'Controller is currently "{self.status}" and cannot be started.')
+            self._event_loop_thread = threading.Thread(target=self._event_loop.run_forever)
+            self._status = Controller.Status.RUNNING
 
         self._event_loop_thread.start()
         while True:
-            with self._lock:
+            with self._status_lock:
                 # Exit GPIO monitoring loop as soon as stop is requested.
-                if self._is_stopping: return
+                if self._status != Controller.Status.RUNNING: return
                 # Clean up old event tasks.
                 for complete_event in [future for future in self._running_event_handlers if future.done()]:
                     self._running_event_handlers.remove(complete_event)
                 # Maybe raise new events. Make sure the controller cannot stop in
                 # the meantime.
                 for button in self._buttons:
-                    event_futures: List[concurrent.futures.Future] = button.update(self._event_loop, self.driver)
+                    event_futures: typing.List[concurrent.futures.Future] = button.update(self._event_loop, self.driver)
                     self._running_event_handlers += event_futures
 
-            if not self._is_stopping: time.sleep(self.iteration_sleep)
+            if self._status == Controller.Status.RUNNING: time.sleep(self.iteration_sleep)
 
 class Button:
-    SyncEventHandler = Callable[['Button'], None]
-    AsyncEventHandler = Callable[['Button'], Coroutine[Any, Any, Any]]
-    EventHandler = Union[SyncEventHandler, AsyncEventHandler]
-    EventHandlerList = List[EventHandler]
+    SyncEventHandler = typing.Callable[['Button'], None]
+    AsyncEventHandler = typing.Callable[['Button'], typing.Coroutine[typing.Any, typing.Any, typing.Any]]
+    EventHandler = typing.Union[SyncEventHandler, AsyncEventHandler]
+    EventHandlerList = typing.List[EventHandler]
 
     def __init__(self, pin_id: int):
-        self.pin_id = pin_id
+        self.pin_id: int = pin_id
         self._pressed: bool = False
         self._long_pressed: bool = False
         self._press_handlers: Button.EventHandlerList = []
@@ -119,8 +135,8 @@ class Button:
         # press.
         self.long_press_timeout: float = 0.5
         # Timestamps of previous presses and releases.
-        self._press_times: List[float] = []
-        self._release_times: List[float] = []
+        self._press_times: typing.List[float] = []
+        self._release_times: typing.List[float] = []
 
     @property
     def pressed(self) -> bool:
@@ -130,7 +146,7 @@ class Button:
     def long_pressed(self) -> bool:
         return self._long_pressed
 
-    def update(self, event_loop, gpio_driver: gpio_driver.GpioDriver) -> List[concurrent.futures.Future]:
+    def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], gpio_driver: gpio_driver.GpioDriver) -> typing.List[concurrent.futures.Future]:
         was_pressed = self._pressed
         was_long_pressed = self._long_pressed
         new_pressed = gpio_driver.is_button_pressed(self.pin_id)
@@ -138,7 +154,7 @@ class Button:
         if not self._pressed: self._long_pressed = False
         current_time: float = time.time()
 
-        event_futures: List[concurrent.futures.Future] = []
+        event_futures: typing.List[concurrent.futures.Future] = []
         if self._pressed and not was_pressed: # PRESS
             # Record time of this new press.
             self._press_times.append(current_time)
@@ -177,7 +193,7 @@ class Button:
 
         return event_futures
 
-    def raise_event(self, event_loop, handlers: EventHandlerList, event_futures: List[concurrent.futures.Future]) -> None:
+    def raise_event(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], handlers: EventHandlerList, event_futures: typing.List[concurrent.futures.Future]) -> None:
         if event_loop is None: return
         event_futures += [asyncio.run_coroutine_threadsafe(self._call_event_handler(handler), event_loop) for handler in handlers]
 
@@ -185,7 +201,7 @@ class Button:
         try:
             handler_result = handler(self)
             if inspect.isawaitable(handler_result):
-                awaitable_result = cast(Awaitable, handler_result)
+                awaitable_result = typing.cast(typing.Awaitable, handler_result)
                 await awaitable_result
         except BaseException as e:
             # TODO Replace that crap with a decent logger!

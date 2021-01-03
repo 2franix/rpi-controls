@@ -16,13 +16,22 @@ class TestController:
 
     @pytest.fixture
     def contrller(self, gpio_driver_mock: gpio_driver.GpioDriver) -> controller.Controller:
-        return controller.Controller(gpio_driver_mock)
+        c = controller.Controller(gpio_driver_mock)
+        assert c.status == controller.Controller.Status.READY
+        return c
 
     @pytest.fixture
     def controller_in_thread(self, contrller: controller.Controller) -> Generator[controller.Controller, None, None]:
+        # Start controller in a separate thread.
         contrller.run_in_thread()
+        assert contrller.status == controller.Controller.Status.RUNNING
+
+        # Let the test use it.
         yield contrller
+
+        # Stop it.
         contrller.stop()
+        assert contrller.status == controller.Controller.Status.STOPPED
 
     def test_button_configuration(self, contrller) -> None:
         """Checks the GPIO driver is used to configure a new button."""
@@ -59,6 +68,25 @@ class TestController:
         time.sleep(0.1)
         assert button10.pressed
         assert button11.pressed
+
+    @pytest.mark.asyncio
+    @pytest.mark.timeout(5)
+    async def test_illegal_start(self, controller_in_thread: controller.Controller) -> None:
+        # Controller is expected to be already running. Start it again to make
+        # sure we handle that gracefully.
+        assert controller_in_thread.status == controller.Controller.Status.RUNNING
+        with pytest.raises(Exception):
+            # Do not call run_in_thread here, because exception would be raised
+            # on another thread. This thread would not see it.
+            controller_in_thread.run()
+
+        # Make sure the controller is still running.
+        assert controller_in_thread.status == controller.Controller.Status.RUNNING
+
+        # Stop it and try to restart => not supported.
+        await controller_in_thread.stop_async()
+        with pytest.raises(Exception):
+            controller_in_thread.run()
 
     @pytest.mark.timeout(7)
     def test_press_release_click_events(self, controller_in_thread: controller.Controller) -> None:
@@ -177,8 +205,9 @@ class TestController:
         time.sleep(iteration_sleep)
         listener.assert_calls(press = 1, release = 1)
 
+    @pytest.mark.asyncio
     @pytest.mark.timeout(5)
-    def test_exception_in_event_handler_when_stopping(self, controller_in_thread: controller.Controller) -> None:
+    async def test_exception_in_event_handler_when_stopping(self, controller_in_thread: controller.Controller) -> None:
         """Makes sure the controller handles in exceptions thrown by event handlers."""
 
         # Setup mocked GPIO driver.
@@ -204,8 +233,9 @@ class TestController:
         listener = ButtonListener(button, common_event_handler=raise_exception_with_delay)
         pressed = True
         iteration_sleep = controller_in_thread.iteration_sleep * 2
-        time.sleep(iteration_sleep) # So that event is raised BEFORE stopping.
-        controller_in_thread.stop() # Explicit stop as this is part of the tested scenario. But the fixture would have stopped it anyway.
+        await asyncio.sleep(iteration_sleep) # So that event is raised BEFORE stopping.
+        await controller_in_thread.stop_async() # Explicit stop as this is part of the tested scenario. But the fixture would have stopped it anyway.
+        assert controller_in_thread.status == controller.Controller.Status.STOPPED
         listener.assert_calls(press = 1)
 
 class ButtonListener:
