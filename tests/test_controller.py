@@ -7,7 +7,7 @@ import pytest
 import time
 import asyncio
 import threading
-from typing import Callable, Coroutine, Any, Generator
+from typing import Optional, Callable, Coroutine, Any, Generator
 
 class TestController:
     @pytest.fixture
@@ -60,10 +60,8 @@ class TestController:
         assert button10.pressed
         assert button11.pressed
 
-
-    @pytest.mark.asyncio
     @pytest.mark.timeout(7)
-    async def test_press_release_click_events(self, controller_in_thread: controller.Controller) -> None:
+    def test_press_release_click_events(self, controller_in_thread: controller.Controller) -> None:
         # Setup mocked GPIO driver.
         pressed: bool = False
         driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
@@ -71,7 +69,9 @@ class TestController:
 
         # Create a button and subscribe to its events.
         button: controller.Button = controller_in_thread.make_button(2)
-        listener = ButtonListener(button)
+        async def wait_2_secs():
+            await asyncio.sleep(2)
+        listener = ButtonListener(button, common_event_handler = wait_2_secs)
 
         # Give the controller some time to update. Event should not be raised.
         iteration_sleep = controller_in_thread.iteration_sleep * 2
@@ -82,34 +82,33 @@ class TestController:
         # be raised yet (it is when button is released).
         pressed = True
         press_time = time.time()
-        await asyncio.sleep(iteration_sleep)
+        time.sleep(iteration_sleep)
         assert button.pressed
         listener.assert_calls(press = 1)
 
         # Release button => event should not be called until double click
         # timeout is reached.
         pressed = False
-        await asyncio.sleep(button.double_click_timeout - time.time() + press_time)
+        time.sleep(0.9*button.double_click_timeout - time.time() + press_time)
         assert not button.pressed
         listener.assert_calls(press = 1, release = 1)
 
         # Now double click timeout has been reached, click should happen.
-        await asyncio.sleep(iteration_sleep)
+        time.sleep(0.2*button.double_click_timeout + iteration_sleep)
         listener.assert_calls(press = 1, release = 1, click = 1)
 
         # Click again. Event handler should be called immediately, even though
         # the first execution is still running.
         pressed = True
         press_time = time.time()
-        await asyncio.sleep(iteration_sleep)
+        time.sleep(iteration_sleep)
         pressed = False
-        await asyncio.sleep(button.double_click_timeout - time.time() + press_time + iteration_sleep)
+        time.sleep(button.double_click_timeout - time.time() + press_time + iteration_sleep)
         assert not button.pressed
         listener.assert_calls(press = 2, release = 2, click = 2)
 
-    @pytest.mark.asyncio
     @pytest.mark.timeout(7)
-    async def test_long_press_double_click_events(self, controller_in_thread: controller.Controller) -> None:
+    def test_long_press_double_click_events(self, controller_in_thread: controller.Controller) -> None:
         # Setup mocked GPIO driver.
         pressed: bool = False
         driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
@@ -119,8 +118,9 @@ class TestController:
         button: controller.Button = controller_in_thread.make_button(2)
         button.long_press_timeout = 0.4
         button.double_click_timeout = 0.3
-        async def nothing(): pass
-        listener = ButtonListener(button, nothing)
+        async def wait_2_secs():
+            await asyncio.sleep(2)
+        listener = ButtonListener(button, common_event_handler = wait_2_secs)
 
         # Give the controller some time to update. Event should not be raised.
         iteration_sleep = controller_in_thread.iteration_sleep * 2
@@ -129,8 +129,7 @@ class TestController:
 
         # Change button state to pressed and wait for long press.
         pressed = True
-        press_time = time.time()
-        await asyncio.sleep(button.long_press_timeout + iteration_sleep)
+        time.sleep(button.long_press_timeout + iteration_sleep)
         assert button.pressed
         assert button.long_pressed
         listener.assert_calls(press = 1, long_press = 1)
@@ -139,7 +138,7 @@ class TestController:
         # the double click timeout has been reached (it's too late to hope for a
         # double click).
         pressed = False
-        await asyncio.sleep(iteration_sleep)
+        time.sleep(iteration_sleep)
         assert not button.pressed
         assert not button.long_pressed
         listener.assert_calls(press = 1, long_press = 1, release = 1, click = 1)
@@ -148,35 +147,106 @@ class TestController:
         assert not pressed # Make sure we start off with the expected state.
         for i in range(4):
             pressed = not pressed
-            await asyncio.sleep(iteration_sleep)
+            time.sleep(iteration_sleep)
         listener.assert_calls(press = 3, long_press = 1, release = 3, click = 1, double_click = 1)
+
+    def test_exception_in_event_handler(self, controller_in_thread: controller.Controller) -> None:
+        """Makes sure the controller handles in exceptions thrown by event handlers."""
+
+        # Setup mocked GPIO driver.
+        pressed: bool = False
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
+        driver.is_button_pressed = lambda pin_id: pressed
+
+        # Create a button and subscribe to its events.
+        button: controller.Button = controller_in_thread.make_button(2)
+        async def raise_exception():
+            raise Exception('Mocks a problem in the event handler!')
+        listener = ButtonListener(button, common_event_handler=raise_exception)
+
+        # Press a button.
+        pressed = True
+        iteration_sleep = controller_in_thread.iteration_sleep * 2
+        time.sleep(iteration_sleep)
+        listener.assert_calls(press=1)
+
+        # Release button => release should be raised even though there was an
+        # exception while handling the previous event. That means the controller
+        # is still alive.
+        pressed = False
+        time.sleep(iteration_sleep)
+        listener.assert_calls(press = 1, release = 1)
+
+    @pytest.mark.timeout(5)
+    def test_exception_in_event_handler_when_stopping(self, controller_in_thread: controller.Controller) -> None:
+        """Makes sure the controller handles in exceptions thrown by event handlers."""
+
+        # Setup mocked GPIO driver.
+        pressed: bool = False
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
+        driver.is_button_pressed = lambda pin_id: pressed
+
+        # Create a button and subscribe to its events.
+        button: controller.Button = controller_in_thread.make_button(2)
+
+        # Make event handler last long enough so that it is still
+        # running when we stop the controller.
+        # In that scenario, the Future corresponding
+        # to the event handler is awaited differently. What may work
+        # when the controller is running may fail here, then.
+        async def raise_exception_with_delay():
+            if not controller_in_thread.is_stopping:
+                await asyncio.sleep(0.01)
+            # Wait a little more to make sure the controller has reached the
+            # point where it waits for the event handlers to complete.
+            await asyncio.sleep(0.5)
+            raise Exception('Mocks a problem in the event handler!')
+        listener = ButtonListener(button, common_event_handler=raise_exception_with_delay)
+        pressed = True
+        iteration_sleep = controller_in_thread.iteration_sleep * 2
+        time.sleep(iteration_sleep) # So that event is raised BEFORE stopping.
+        controller_in_thread.stop() # Explicit stop as this is part of the tested scenario. But the fixture would have stopped it anyway.
+        listener.assert_calls(press = 1)
 
 class ButtonListener:
     def __init__(self, button: controller.Button, common_event_handler: Callable[[], Coroutine[Any, Any, Any]] = None):
         assert not button is None
         self.button: controller.Button = button
         self.press_call_count: int = 0
+        self.press_sync_call_count: int = 0
         self.long_press_call_count: int = 0
+        self.long_press_sync_call_count: int = 0
         self.release_call_count: int = 0
+        self.release_sync_call_count: int = 0
         self.click_call_count: int = 0
+        self.click_sync_call_count: int = 0
         self.double_click_call_count: int = 0
+        self.double_click_sync_call_count: int = 0
         self.button.add_on_press(self.on_press)
+        self.button.add_on_press(self.on_press_sync) # Synchronous event handler
         self.button.add_on_long_press(self.on_long_press)
+        self.button.add_on_long_press(self.on_long_press_sync)
         self.button.add_on_release(self.on_release)
+        self.button.add_on_release(self.on_release_sync)
         self.button.add_on_click(self.on_click)
+        self.button.add_on_click(self.on_click_sync)
         self.button.add_on_double_click(self.on_double_click)
-        self._common_event_handler: Callable[[], Coroutine[Any, Any, Any]] = self._default_common_event_handler
-        if common_event_handler is not None:
-            self._common_event_handler = common_event_handler
+        self.button.add_on_double_click(self.on_double_click_sync)
+        self._custom_common_event_handler: Optional[Callable[[], Coroutine[Any, Any, Any]]] = common_event_handler
 
-    async def _default_common_event_handler(self):
-        await asyncio.sleep(2)
+    async def _common_event_handler(self):
+        if self._custom_common_event_handler:
+            await self._custom_common_event_handler()
 
     async def on_press(self, button: controller.Button) -> None:
         assert button == self.button
         assert button.pressed
         self.press_call_count += 1
         await self._common_event_handler()
+
+    def on_press_sync(self, button: controller.Button) -> None:
+        assert button == self.button
+        self.press_sync_call_count += 1
 
     async def on_long_press(self, button: controller.Button) -> None:
         assert button == self.button
@@ -185,6 +255,12 @@ class ButtonListener:
         self.long_press_call_count += 1
         await self._common_event_handler()
 
+    def on_long_press_sync(self, button: controller.Button) -> None:
+        assert button == self.button
+        assert button.pressed
+        assert button.long_pressed
+        self.long_press_sync_call_count += 1
+
     async def on_release(self, button: controller.Button) -> None:
         assert button == self.button
         assert not button.pressed
@@ -192,19 +268,38 @@ class ButtonListener:
         self.release_call_count += 1
         await self._common_event_handler()
 
+    def on_release_sync(self, button: controller.Button) -> None:
+        assert button == self.button
+        assert not button.pressed
+        assert not button.long_pressed
+        self.release_sync_call_count += 1
+
     async def on_click(self, button: controller.Button) -> None:
         assert button == self.button
         self.click_call_count += 1
         await self._common_event_handler()
+
+    def on_click_sync(self, button: controller.Button) -> None:
+        assert button == self.button
+        self.click_sync_call_count += 1
 
     async def on_double_click(self, button: controller.Button) -> None:
         assert button == self.button
         self.double_click_call_count += 1
         await self._common_event_handler()
 
+    def on_double_click_sync(self, button: controller.Button) -> None:
+        assert button == self.button
+        self.double_click_sync_call_count += 1
+
     def assert_calls(self, press: int = 0, long_press: int = 0, release: int = 0, click: int = 0, double_click: int = 0):
         assert self.press_call_count == press
+        assert self.press_sync_call_count == press
         assert self.long_press_call_count == long_press
+        assert self.long_press_sync_call_count == long_press
         assert self.release_call_count == release
+        assert self.release_sync_call_count == release
         assert self.click_call_count == click
+        assert self.click_sync_call_count == click
         assert self.double_click_call_count == double_click
+        assert self.double_click_sync_call_count == double_click

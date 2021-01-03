@@ -7,8 +7,9 @@ import subprocess
 import signal
 import asyncio
 import concurrent.futures
+import inspect
 import os
-from typing import Callable, Coroutine, List, Type, Any
+from typing import cast, Callable, Coroutine, List, Type, Any, Union, Awaitable
 from . import gpio_driver
 import threading
 
@@ -34,8 +35,18 @@ class Controller:
         self._event_loop_thread: threading.Thread = threading.Thread(target=self._event_loop.run_forever)
         self._running_event_handlers: List[concurrent.futures.Future] = []
 
+    @property
+    def is_stopping(self):
+        return self._is_stopping
+
     def make_button(self, pin_id) -> Button:
-        button = Button(pin_id, self)
+        button = Button(pin_id)
+        self.driver.configure_button(pin_id)
+
+        # Do an initial update to initialize the internal state of the button.
+        # No event loop is passed, so that it does not attempt to raise any
+        # event.
+        button.update(None, self.driver)
         self._buttons.append(button)
         return button
 
@@ -77,21 +88,18 @@ class Controller:
                 # Maybe raise new events. Make sure the controller cannot stop in
                 # the meantime.
                 for button in self._buttons:
-                    event_futures: List[concurrent.futures.Future] = button.update(self._event_loop)
+                    event_futures: List[concurrent.futures.Future] = button.update(self._event_loop, self.driver)
                     self._running_event_handlers += event_futures
 
             if not self._is_stopping: time.sleep(self.iteration_sleep)
 
-    def configure_button(self, pin_id: int) -> None:
-        self.driver.configure_button(pin_id)
-
 class Button:
-    EventHandler = Callable[['Button'], Coroutine[Any, Any, Any]]
+    SyncEventHandler = Callable[['Button'], None]
+    AsyncEventHandler = Callable[['Button'], Coroutine[Any, Any, Any]]
+    EventHandler = Union[SyncEventHandler, AsyncEventHandler]
     EventHandlerList = List[EventHandler]
 
-    def __init__(self, pin_id: int, controller: Controller):
-        assert controller, "No controller."
-        self._controller = controller
+    def __init__(self, pin_id: int):
         self.pin_id = pin_id
         self._pressed: bool = False
         self._long_pressed: bool = False
@@ -100,7 +108,6 @@ class Button:
         self._long_press_handlers: Button.EventHandlerList = []
         self._click_handlers: Button.EventHandlerList = []
         self._double_click_handlers: Button.EventHandlerList = []
-        self._controller.configure_button(self.pin_id)
         # Maximum elapsed seconds between a press and the second release to qualify
         # for a double click.
         self.double_click_timeout: float = 0.4
@@ -110,9 +117,6 @@ class Button:
         # Timestamps of previous presses and releases.
         self._press_times: List[float] = []
         self._release_times: List[float] = []
-        # Do initial update to capture initial button state without raising
-        # events.
-        self.update(None)
 
     @property
     def pressed(self) -> bool:
@@ -122,11 +126,10 @@ class Button:
     def long_pressed(self) -> bool:
         return self._long_pressed
 
-    def update(self, event_loop) -> List[concurrent.futures.Future]:
-        assert threading.current_thread() != self._controller._event_loop_thread
+    def update(self, event_loop, gpio_driver: gpio_driver.GpioDriver) -> List[concurrent.futures.Future]:
         was_pressed = self._pressed
         was_long_pressed = self._long_pressed
-        new_pressed = self._controller.driver.is_button_pressed(self.pin_id)
+        new_pressed = gpio_driver.is_button_pressed(self.pin_id)
         self._pressed = new_pressed
         if not self._pressed: self._long_pressed = False
         current_time: float = time.time()
@@ -172,8 +175,17 @@ class Button:
 
     def raise_event(self, event_loop, handlers: EventHandlerList, event_futures: List[concurrent.futures.Future]) -> None:
         if event_loop is None: return
-        event_futures += [asyncio.run_coroutine_threadsafe(handler(self), event_loop) for handler in handlers]
-        # event_loop.call_soon_threadsafe(lambda: event_loop.create_task(handler(self)))
+        event_futures += [asyncio.run_coroutine_threadsafe(self._call_event_handler(handler), event_loop) for handler in handlers]
+
+    async def _call_event_handler(self, handler: EventHandler):
+        try:
+            handler_result = handler(self)
+            if inspect.isawaitable(handler_result):
+                awaitable_result = cast(Awaitable, handler_result)
+                await awaitable_result
+        except BaseException as e:
+            # TODO Replace that crap with a decent logger!
+            print(str(e))
 
     def add_on_press(self, func: EventHandler) -> None:
         self._press_handlers.append(func)
