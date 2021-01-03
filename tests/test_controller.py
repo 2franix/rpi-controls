@@ -33,6 +33,12 @@ class TestController:
         contrller.stop()
         assert contrller.status == controller.Controller.Status.STOPPED
 
+    def test_button_name(self, contrller: controller.Controller) -> None:
+        button_with_default_name = contrller.make_button(10)
+        assert button_with_default_name.name == 'button for pin 10'
+        button_with_explicit_name = contrller.make_button(11, 'Light ON/OFF')
+        assert button_with_explicit_name.name == 'Light ON/OFF'
+
     def test_button_configuration(self, contrller) -> None:
         """Checks the GPIO driver is used to configure a new button."""
         button = contrller.make_button(12)
@@ -236,6 +242,32 @@ class TestController:
         await asyncio.sleep(iteration_sleep) # So that event is raised BEFORE stopping.
         await controller_in_thread.stop_async() # Explicit stop as this is part of the tested scenario. But the fixture would have stopped it anyway.
         assert controller_in_thread.status == controller.Controller.Status.STOPPED
+        listener.assert_calls(press = 1)
+
+    @pytest.mark.asyncio
+    @pytest.mark.timeout(5)
+    async def test_gpio_changes_when_controller_is_stopped(self, controller_in_thread: controller.Controller) -> None:
+        """Makes sure the no events are raised after the controller has been stopping."""
+
+        # Setup mocked GPIO driver.
+        pressed: bool = False
+        driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the is_button_pressed method (see mypy issue 2427)
+        driver.is_button_pressed = lambda pin_id: pressed
+
+        # Create a button and subscribe to its events.
+        button: controller.Button = controller_in_thread.make_button(2)
+
+        listener = ButtonListener(button)
+        pressed = True
+        iteration_sleep = controller_in_thread.iteration_sleep * 2
+        await asyncio.sleep(iteration_sleep) # So that event is raised BEFORE stopping.
+        await controller_in_thread.stop_async()
+        assert controller_in_thread.status == controller.Controller.Status.STOPPED
+        listener.assert_calls(press = 1)
+
+        # Release button. Since controller is stopped, no new event is expected.
+        pressed = False
+        await asyncio.sleep(iteration_sleep)
         listener.assert_calls(press = 1)
 
 class ButtonListener:
