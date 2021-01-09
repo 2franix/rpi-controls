@@ -34,15 +34,22 @@ class TestController:
         assert contrller.status == controller.Controller.Status.STOPPED
 
     def test_button_name(self, contrller: controller.Controller) -> None:
-        button_with_default_name = contrller.make_button(10)
+        button_with_default_name = contrller.make_button(10,
+                                                         controller.InputType.PRESSED_WHEN_ON,
+                                                         gpio_driver.PullType.UP)
         assert button_with_default_name.name == 'button for pin 10'
-        button_with_explicit_name = contrller.make_button(11, 'Light ON/OFF')
+        button_with_explicit_name = contrller.make_button(11,
+                                                          controller.InputType.PRESSED_WHEN_ON,
+                                                          gpio_driver.PullType.DOWN,
+                                                          'Light ON/OFF')
         assert button_with_explicit_name.name == 'Light ON/OFF'
 
     def test_button_configuration(self, contrller) -> None:
         """Checks the GPIO driver is used to configure a new button."""
-        button = contrller.make_button(12)
-        contrller.driver.configure_button.assert_called_once_with(12)
+        button = contrller.make_button(12,
+                                       controller.InputType.PRESSED_WHEN_ON,
+                                       gpio_driver.PullType.NONE)
+        contrller.driver.configure_button.assert_called_once_with(12, gpio_driver.PullType.NONE)
 
     def test_button_update(self, controller_in_thread) -> None:
         """Checks that buttons update their pressed state as expected."""
@@ -51,8 +58,12 @@ class TestController:
         controller_in_thread.driver.input = MagicMock(side_effect=lambda pin_id: button_states[pin_id])
 
         # Create two buttons.
-        button10 = controller_in_thread.make_button(10)
-        button11 = controller_in_thread .make_button(11, contact_type = controller.ContactType.NORMALLY_CLOSED)
+        button10 = controller_in_thread.make_button(10,
+                                                    controller.InputType.PRESSED_WHEN_ON,
+                                                    gpio_driver.PullType.NONE)
+        button11 = controller_in_thread .make_button(11,
+                                                     controller.InputType.PRESSED_WHEN_OFF,
+                                                     gpio_driver.PullType.NONE)
 
         # According to our GPIO mock, their GPIO pins are not active.
         assert not button10.pressed # Normally open.
@@ -102,7 +113,9 @@ class TestController:
         driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its events.
-        button: controller.Button = controller_in_thread.make_button(2)
+        button: controller.Button = controller_in_thread.make_button(2,
+                                                                     controller.InputType.PRESSED_WHEN_ON,
+                                                                     gpio_driver.PullType.NONE)
         async def wait_2_secs():
             await asyncio.sleep(2)
         listener = ButtonListener(button, common_event_handler = wait_2_secs)
@@ -149,7 +162,9 @@ class TestController:
         driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its click event.
-        button: controller.Button = controller_in_thread.make_button(2)
+        button: controller.Button = controller_in_thread.make_button(2,
+                                                                     controller.InputType.PRESSED_WHEN_ON,
+                                                                     gpio_driver.PullType.NONE)
         button.long_press_timeout = 0.4
         button.double_click_timeout = 0.3
         async def wait_2_secs():
@@ -193,7 +208,9 @@ class TestController:
         driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its events.
-        button: controller.Button = controller_in_thread.make_button(2)
+        button: controller.Button = controller_in_thread.make_button(2,
+                                                                     controller.InputType.PRESSED_WHEN_ON,
+                                                                     gpio_driver.PullType.NONE)
         async def raise_exception():
             raise Exception('Mocks a problem in the event handler!')
         listener = ButtonListener(button, common_event_handler=raise_exception)
@@ -222,7 +239,9 @@ class TestController:
         driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its events.
-        button: controller.Button = controller_in_thread.make_button(2)
+        button: controller.Button = controller_in_thread.make_button(2,
+                                                                     controller.InputType.PRESSED_WHEN_ON,
+                                                                     gpio_driver.PullType.NONE)
 
         # Make event handler last long enough so that it is still
         # running when we stop the controller.
@@ -255,7 +274,9 @@ class TestController:
         driver.input = lambda pin_id: pressed
 
         # Create a button and subscribe to its events.
-        button: controller.Button = controller_in_thread.make_button(2)
+        button: controller.Button = controller_in_thread.make_button(2,
+                                                                     controller.InputType.PRESSED_WHEN_ON,
+                                                                     gpio_driver.PullType.NONE)
 
         listener = ButtonListener(button)
         pressed = True
