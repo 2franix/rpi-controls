@@ -1,1 +1,1 @@
-# Button controller for Raspberry Pi
+# GPIO controller for Raspberry Pi
