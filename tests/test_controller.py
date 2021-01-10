@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from __future__ import annotations
-from rpibuttons import GpioDriver, Controller, Button, PullType
+from rpicontrols import GpioDriver, Controller, Button, PullType
 from unittest.mock import MagicMock, call
 import pytest
 import time
