@@ -15,10 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
 
-from . import controller, gpio_driver
+import typing
+from .controller import Controller, Button
+from .gpio_driver import GpioDriver, PullType
 
-def make_controller(gpio_driver: gpio_driver.GpioDriver = None) -> controller.Controller:
+# Define public modules and functions.
+__all__: typing.Sequence[str] = [m.__name__ for m in (Controller, Button, GpioDriver, PullType)] + ['make_controller']
+
+def make_controller(gpio_driver: GpioDriver = None) -> Controller:
     if not gpio_driver:
         from . import rpi_gpio_driver
         gpio_driver = rpi_gpio_driver.RpiGpioDriver()
-    return controller.Controller(gpio_driver)
+    return Controller(gpio_driver)

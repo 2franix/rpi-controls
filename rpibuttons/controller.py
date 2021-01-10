@@ -17,10 +17,6 @@ import threading
 
 def get_logger(): return logging.getLogger(__name__)
 
-class InputType(enum.Enum):
-    PRESSED_WHEN_ON = 1
-    PRESSED_WHEN_OFF = 2
-
 class Controller:
     class Status(enum.Enum):
         READY: str = "ready"
@@ -52,7 +48,7 @@ class Controller:
 
     def make_button(self,
             input_pin_id: int,
-            input: InputType,
+            input: Button.InputType,
             pull: gpio_driver.PullType,
             name: typing.Optional[str] = None) -> Button:
         button = Button(input_pin_id, input, name)
@@ -147,15 +143,19 @@ class Controller:
             if self._status == Controller.Status.RUNNING: time.sleep(self.iteration_sleep)
 
 class Button:
+    class InputType(enum.Enum):
+        PRESSED_WHEN_ON = 1
+        PRESSED_WHEN_OFF = 2
+
     SyncEventHandler = typing.Callable[['Button'], None]
     AsyncEventHandler = typing.Callable[['Button'], typing.Coroutine[typing.Any, typing.Any, typing.Any]]
     EventHandler = typing.Union[SyncEventHandler, AsyncEventHandler]
     EventHandlerList = typing.List[EventHandler]
 
-    def __init__(self, input_pin_id: int, input_type: InputType, name: typing.Optional[str]):
+    def __init__(self, input_pin_id: int, input_type: Button.InputType, name: typing.Optional[str]):
         self._pin_id: int = input_pin_id
         self._name: str = name or f'button for pin {input_pin_id}'
-        self._input_type: InputType = input_type
+        self._input_type: Button.InputType = input_type
         self._pressed: bool = False
         self._long_pressed: bool = False
         self._press_handlers: Button.EventHandlerList = []
@@ -197,7 +197,7 @@ class Button:
         was_pressed: bool = self._pressed
         was_long_pressed: bool = self._long_pressed
         pin_input: bool = gpio_driver.input(self.pin_id)
-        new_pressed: bool = pin_input if self._input_type == InputType.PRESSED_WHEN_ON else not pin_input
+        new_pressed: bool = pin_input if self._input_type == Button.InputType.PRESSED_WHEN_ON else not pin_input
         self._pressed = new_pressed
         if not self._pressed: self._long_pressed = False
         current_time: float = time.time()
