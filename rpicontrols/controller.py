@@ -64,12 +64,19 @@ class Controller:
         return button
 
     def stop(self, kills_running_events: bool = False) -> None:
-        stop_future = self.stop_async(kills_running_events)
+        get_logger().debug("stop 0")
         try:
+            def stop_caller():
+                get_logger().debug("stop 1")
+                self.stop_async(kills_running_events)
             loop = asyncio.get_running_loop()
-            loop.run_until_complete(stop_future)
+            get_logger().debug("stop 2")
+            loop.call_soon(stop_caller)
+            get_logger().debug("stop 3")
         except RuntimeError:
-            asyncio.run(stop_future)
+            get_logger().debug("stop 4")
+            asyncio.run(self.stop_async(kills_running_events))
+            get_logger().debug("stop 5")
 
     async def stop_async(self, kills_running_events: bool = False) -> None:
         get_logger().info('Stopping controller...')
@@ -86,31 +93,13 @@ class Controller:
 
             self._status = Controller.Status.STOPPING
 
-        # Wait for any event handlers to complete.
-        if not kills_running_events:
-            if self._running_event_handlers:
-                get_logger().debug('Waiting for currently running event handlers to complete...')
-
-                # Convert concurrent futures to asyncio ones. Can be done here since
-                # we are in an async event loop.
-                await asyncio.gather(*[asyncio.wrap_future(handler_future) for handler_future in self._running_event_handlers])
-                get_logger().debug('All event handlers are now complete.')
-
-        # Request the event loop to stop (so will end its thread).
-        # https://stackoverflow.com/a/51647591
-        self._event_loop.call_soon_threadsafe(self._event_loop.stop)
-        while self._event_loop.is_running():
-            await asyncio.sleep(0.010)
-        get_logger().debug('Async event loop for event handlers is now stopped.')
-        with self._status_lock:
-            self._status = Controller.Status.STOPPED
-            get_logger().info('Controller is now stopped')
-
     def run_in_thread(self) -> None:
-        thread = threading.Thread(target=self.run)
+        def async_runner():
+            asyncio.run(self.run_async())
+        thread = threading.Thread(target=async_runner)
         thread.start()
 
-    def run(self) -> None:
+    async def run_async(self) -> None:
         """Runs the engine controlling the GPIO.
 
         Keyword arguments:
@@ -133,7 +122,7 @@ class Controller:
                 # Exit GPIO monitoring loop as soon as stop is requested.
                 if self._status != Controller.Status.RUNNING:
                     get_logger().info('Stop requested, aborting the GPIO monitoring loop.')
-                    return
+                    break
 
                 # Clean up old event tasks.
                 for complete_event in [future for future in self._running_event_handlers if future.done()]:
@@ -145,14 +134,35 @@ class Controller:
                     event_futures: typing.List[concurrent.futures.Future] = button.update(self._event_loop, self.driver)
                     self._running_event_handlers += event_futures
 
-            if self._status == Controller.Status.RUNNING: time.sleep(self.iteration_sleep)
+            if self._status == Controller.Status.RUNNING:
+                await asyncio.sleep(self.iteration_sleep)
+
+        # Wait for any event handlers to complete.
+        #if not kills_running_events:
+        if self._running_event_handlers:
+            get_logger().debug('Waiting for currently running event handlers to complete...')
+
+            # Convert concurrent futures to asyncio ones. Can be done here since
+            # we are in an async event loop.
+            await asyncio.gather(*[asyncio.wrap_future(handler_future) for handler_future in self._running_event_handlers])
+            get_logger().debug('All event handlers are now complete.')
+
+        # Request the event loop to stop (so will end its thread).
+        # https://stackoverflow.com/a/51647591
+        self._event_loop.call_soon_threadsafe(self._event_loop.stop)
+        while self._event_loop.is_running():
+            await asyncio.sleep(0.010)
+        get_logger().debug('Async event loop for event handlers is now stopped.')
+        with self._status_lock:
+            self._status = Controller.Status.STOPPED
+            get_logger().info('Controller is now stopped')
 
     def stop_on_signals(self, signals=[signal.SIGINT, signal.SIGTERM]):
         for sig in signals:
             signal.signal(sig, self._signal_handler)
 
     def _signal_handler(self, signal, frame):
-        self.stop_async()
+        self.stop()
 
 class Button:
     class InputType(enum.Enum):

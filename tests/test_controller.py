@@ -84,7 +84,7 @@ class TestController:
         with pytest.raises(Exception):
             # Do not call run_in_thread here, because exception would be raised
             # on another thread. This thread would not see it.
-            controller_in_thread.run()
+            await controller_in_thread.run_async()
 
         # Make sure the controller is still running.
         assert controller_in_thread.status == Controller.Status.RUNNING
@@ -92,7 +92,7 @@ class TestController:
         # Stop it and try to restart => not supported.
         await controller_in_thread.stop_async()
         with pytest.raises(Exception):
-            controller_in_thread.run()
+            await controller_in_thread.run_async()
 
     @pytest.mark.timeout(7)
     def test_press_release_click_events(self, controller_in_thread: Controller) -> None:
