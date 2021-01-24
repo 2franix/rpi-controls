@@ -64,7 +64,12 @@ class Controller:
         return button
 
     def stop(self, kills_running_events: bool = False) -> None:
-        asyncio.run(self.stop_async(kills_running_events))
+        stop_future = self.stop_async(kills_running_events)
+        try:
+            loop = asyncio.get_running_loop()
+            loop.run_until_complete(stop_future)
+        except RuntimeError:
+            asyncio.run(stop_future)
 
     async def stop_async(self, kills_running_events: bool = False) -> None:
         get_logger().info('Stopping controller...')
@@ -147,7 +152,7 @@ class Controller:
             signal.signal(sig, self._signal_handler)
 
     def _signal_handler(self, signal, frame):
-        self.stop()
+        self.stop_async()
 
 class Button:
     class InputType(enum.Enum):
