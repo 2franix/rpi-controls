@@ -254,11 +254,11 @@ class Button:
         try:
             handler_result = handler(self)
             if inspect.isawaitable(handler_result):
-                get_logger().debug('Called event handler asynchronously for "{event_name}" on button {self.name}.')
+                get_logger().debug(f'Called event handler asynchronously for "{event_name}" on button {self.name}.')
                 awaitable_result = typing.cast(typing.Awaitable, handler_result)
                 await awaitable_result
             else:
-                get_logger().debug('Called event handler synchronously for "{event_name}" on button {self.name}.')
+                get_logger().debug(f'Called event handler synchronously for "{event_name}" on button {self.name}.')
 
         except BaseException as e:
             get_logger().exception(e)
