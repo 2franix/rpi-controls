@@ -142,6 +142,13 @@ class Controller:
 
             if self._status == Controller.Status.RUNNING: time.sleep(self.iteration_sleep)
 
+    def stop_on_signals(self, signals=[signal.SIGINT, signal.SIGTERM]):
+        for sig in signals:
+            signal.signal(sig, self._signal_handler)
+
+    def _signal_handler(self, signal, frame):
+        self.stop()
+
 class Button:
     class InputType(enum.Enum):
         PRESSED_WHEN_ON = 1
