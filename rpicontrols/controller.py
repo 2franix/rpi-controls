@@ -93,11 +93,16 @@ class Controller:
 
             self._status = Controller.Status.STOPPING
 
+        while self._status != Controller.Status.STOPPED:
+            await asyncio.sleep(0.01)
+
     def run_in_thread(self) -> None:
         def async_runner():
             asyncio.run(self.run_async())
         thread = threading.Thread(target=async_runner)
         thread.start()
+        while self._status == Controller.Status.READY:
+            time.sleep(0.01)
 
     async def run_async(self) -> None:
         """Runs the engine controlling the GPIO.
