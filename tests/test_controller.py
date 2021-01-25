@@ -7,6 +7,7 @@ import pytest
 import time
 import asyncio
 import threading
+import logging
 from typing import Optional, Callable, Coroutine, Any, Generator
 
 class TestController:
@@ -23,14 +24,14 @@ class TestController:
     @pytest.fixture
     def controller_in_thread(self, contrller: Controller) -> Generator[Controller, None, None]:
         # Start controller in a separate thread.
-        contrller.run_in_thread()
+        contrller.start_in_thread()
         assert contrller.status == Controller.Status.RUNNING
 
         # Let the test use it.
         yield contrller
 
         # Stop it.
-        contrller.stop()
+        contrller.stop(wait=True)
         assert contrller.status == Controller.Status.STOPPED
 
     def test_button_name(self, contrller: Controller) -> None:
@@ -75,24 +76,23 @@ class TestController:
         assert button10.pressed
         assert not button11.pressed
 
-    @pytest.mark.asyncio
     @pytest.mark.timeout(5)
-    async def test_illegal_start(self, controller_in_thread: Controller) -> None:
+    def test_illegal_start(self, controller_in_thread: Controller) -> None:
         # Controller is expected to be already running. Start it again to make
         # sure we handle that gracefully.
         assert controller_in_thread.status == Controller.Status.RUNNING
         with pytest.raises(Exception):
-            # Do not call run_in_thread here, because exception would be raised
+            # Do not call start_in_thread here, because exception would be raised
             # on another thread. This thread would not see it.
-            await controller_in_thread.run_async()
+            controller_in_thread.run()
 
         # Make sure the controller is still running.
         assert controller_in_thread.status == Controller.Status.RUNNING
 
         # Stop it and try to restart => not supported.
-        await controller_in_thread.stop_async()
+        controller_in_thread.stop(wait=True)
         with pytest.raises(Exception):
-            await controller_in_thread.run_async()
+            controller_in_thread.run()
 
     @pytest.mark.timeout(7)
     def test_press_release_click_events(self, controller_in_thread: Controller) -> None:
@@ -240,7 +240,7 @@ class TestController:
         pressed = True
         iteration_sleep = controller_in_thread.iteration_sleep * 2
         await asyncio.sleep(iteration_sleep) # So that event is raised BEFORE stopping.
-        await controller_in_thread.stop_async() # Explicit stop as this is part of the tested scenario. But the fixture would have stopped it anyway.
+        controller_in_thread.stop(wait=True) # Explicit stop as this is part of the tested scenario. But the fixture would have stopped it anyway.
         assert controller_in_thread.status == Controller.Status.STOPPED
         listener.assert_calls(press = 1)
 
@@ -261,7 +261,7 @@ class TestController:
         pressed = True
         iteration_sleep = controller_in_thread.iteration_sleep * 2
         await asyncio.sleep(iteration_sleep) # So that event is raised BEFORE stopping.
-        await controller_in_thread.stop_async()
+        controller_in_thread.stop(wait=True)
         assert controller_in_thread.status == Controller.Status.STOPPED
         listener.assert_calls(press = 1)
 
