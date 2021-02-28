@@ -24,16 +24,15 @@ class Controller:
         STOPPING: str = "stopping"
         STOPPED: str = "stopped"
 
-    def __init__(self, driver: gpio_driver.GpioDriver, iteration_sleep=0.01):
+    def __init__(self, driver: gpio_driver.GpioDriver):
         """Initializes a new instance of the engine controlling the GPIO.
 
         Keyword arguments:
         driver -- object abstracting access to the GPIO.
-        iteration_sleep -- pause in seconds before entering the next iteration of the mainloop.
         """
         self.driver: gpio_driver.GpioDriver = driver
         self._buttons: typing.List[Button] = []
-        self.iteration_sleep: float = 0.01
+        self.iteration_sleep: float = 1.0
         self._status_lock: threading.Lock = threading.Lock()
         self._status: Controller.Status = Controller.Status.READY
 
@@ -104,6 +103,7 @@ class Controller:
             self._status = Controller.Status.RUNNING
 
         self._event_loop_thread.start()
+        self.driver.set_edge_callback(self._on_gpio_edge)
         get_logger().debug('Async event loop for event handlers started.')
         while True:
             with self._status_lock:
@@ -115,12 +115,6 @@ class Controller:
                 # Clean up old event tasks.
                 for complete_event in [future for future in self._running_event_handlers if future.done()]:
                     self._running_event_handlers.remove(complete_event)
-
-                # Maybe raise new events. Make sure the controller cannot stop in
-                # the meantime.
-                for button in self._buttons:
-                    event_futures: typing.List[concurrent.futures.Future] = button.update(self._event_loop, self.driver)
-                    self._running_event_handlers += event_futures
 
             if self._status == Controller.Status.RUNNING:
                 time.sleep(self.iteration_sleep)
@@ -145,6 +139,24 @@ class Controller:
         with self._status_lock:
             self._status = Controller.Status.STOPPED
             get_logger().info('Controller is now stopped')
+
+    def _get_button(self, pin_id: int) -> typing.Optional[Button]:
+        buttons = [b for b in self._buttons if b.pin_id == pin_id]
+        if not buttons: return None
+        if len(buttons) > 1:
+            raise Exception(f'Several buttons correspond to pin {pin_id}.')
+        return buttons[0]
+
+    def _on_gpio_edge(self, pin_id: int) -> None:
+        with self._status_lock:
+            # Maybe raise new events. Make sure the controller cannot stop in
+            # the meantime.
+            button: typing.Optional[Button] = self._get_button(pin_id)
+            if not button:
+                get_logger().info(f'Ignoring edge for GPIO pin {pin_id} because no button is registered for it.')
+                return
+            event_futures: typing.List[concurrent.futures.Future] = button.update(self._event_loop, self.driver)
+            self._running_event_handlers += event_futures
 
     def stop_on_signals(self, signals=[signal.SIGINT, signal.SIGTERM]):
         for sig in signals:

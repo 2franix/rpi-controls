@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import enum
+from typing import Callable
 
 class PullType(enum.Enum):
     NONE = 1
@@ -14,3 +15,6 @@ class GpioDriver:
 
     def configure_button(self, pin_id: int, pull: PullType) -> None:
         raise NotImplementedError("Missing function 'configure_button'.")
+
+    def set_edge_callback(self, callback: Callable[[int], None]):
+        raise NotImplementedError("Missing function 'set_edge_callback'.")
