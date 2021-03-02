@@ -31,7 +31,10 @@ class GpioDriverMock(GpioDriver):
     def set_pin_state(self, pin_id: int, state: bool) -> None:
         if self._pin_states[pin_id] != state:
             self._pin_states[pin_id] = state
-            if self._edge_callback: self._edge_callback(pin_id)
+            if self._edge_callback:
+                self._edge_callback(pin_id)
+            else:
+                raise Exception('Edge callback not set yet. Test is probably misconfigured.')
 
 class TestController:
     @pytest.fixture
@@ -126,6 +129,8 @@ class TestController:
         # Create a button and subscribe to its events.
         button: Button = controller_in_thread.make_button(2, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
         async def wait_2_secs():
+            # Waste some time to check that events are queued until they can
+            # run.
             await asyncio.sleep(2)
         listener = ButtonListener(button, common_event_handler = wait_2_secs)
 
@@ -138,8 +143,8 @@ class TestController:
         # be raised yet (it is when button is released).
         pressed(True)
         press_time = time.time()
-        time.sleep(iteration_sleep)
         assert button.pressed
+        time.sleep(0.3)
         listener.assert_calls(press = 1)
 
         # Release button => event should not be called until double click
@@ -150,16 +155,17 @@ class TestController:
         listener.assert_calls(press = 1, release = 1)
 
         # Now double click timeout has been reached, click should happen.
-        time.sleep(0.2*button.double_click_timeout + iteration_sleep)
+        time.sleep(0.4*button.double_click_timeout)
+        assert not button.pressed
         listener.assert_calls(press = 1, release = 1, click = 1)
 
         # Click again. Event handler should be called immediately, even though
         # the first execution is still running.
         pressed(True)
         press_time = time.time()
-        time.sleep(iteration_sleep)
+        assert button.pressed
         pressed(False)
-        time.sleep(button.double_click_timeout - time.time() + press_time + iteration_sleep)
+        time.sleep(1.1 * (button.double_click_timeout - time.time() + press_time))
         assert not button.pressed
         listener.assert_calls(press = 2, release = 2, click = 2)
 
@@ -185,8 +191,8 @@ class TestController:
 
         # Change button state to pressed and wait for long press.
         pressed(True)
-        time.sleep(button.long_press_timeout + iteration_sleep)
         assert button.pressed
+        time.sleep(button.long_press_timeout + iteration_sleep)
         assert button.long_pressed
         listener.assert_calls(press = 1, long_press = 1)
 
@@ -200,9 +206,9 @@ class TestController:
         listener.assert_calls(press = 1, long_press = 1, release = 1, click = 1)
 
         # Perform a double click.
-        assert not pressed # Make sure we start off with the expected state.
+        assert not button.pressed # Make sure we start off with the expected state.
         for i in range(4):
-            pressed = not pressed
+            pressed(not controller_in_thread.driver.input(2))
             time.sleep(iteration_sleep)
         listener.assert_calls(press = 3, long_press = 1, release = 3, click = 1, double_click = 1)
 
@@ -321,9 +327,12 @@ class ButtonListener:
         if self._custom_common_event_handler:
             await self._custom_common_event_handler()
 
+    # Don't assert press/long_press states in those callbacks
+    # as state can already have changed by the time the callback
+    # is actually called. Tests could wait a little 
+    # before changing state but it would still be unreliable.
     async def on_press(self, button: Button) -> None:
         assert button == self.button
-        assert button.pressed
         self.press_call_count += 1
         await self._common_event_handler()
 
@@ -333,28 +342,20 @@ class ButtonListener:
 
     async def on_long_press(self, button: Button) -> None:
         assert button == self.button
-        assert button.pressed
-        assert button.long_pressed
         self.long_press_call_count += 1
         await self._common_event_handler()
 
     def on_long_press_sync(self, button: Button) -> None:
         assert button == self.button
-        assert button.pressed
-        assert button.long_pressed
         self.long_press_sync_call_count += 1
 
     async def on_release(self, button: Button) -> None:
         assert button == self.button
-        assert not button.pressed
-        assert not button.long_pressed
         self.release_call_count += 1
         await self._common_event_handler()
 
     def on_release_sync(self, button: Button) -> None:
         assert button == self.button
-        assert not button.pressed
-        assert not button.long_pressed
         self.release_sync_call_count += 1
 
     async def on_click(self, button: Button) -> None:
