@@ -28,9 +28,9 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
             raise Exception('Unsupported pull type {pull}')
 
         GPIO.setup(pin_id, GPIO.IN, pull_up_down=pull_up_down)
-        GPIO.add_event_detect(pin_id, GPIO.BOTH)
-        GPIO.add_event_callback(pin_id, edge=GPIO.RISING, callback=self._on_rising_edge)
-        GPIO.add_event_callback(pin_id, edge=GPIO.FALLING, callback=self._on_falling_edge)
+        bounce_time = 6 # milliseconds
+        GPIO.add_event_detect(pin_id, GPIO.RISING, callback=self._on_rising_edge, bouncetime=bounce_time)
+        GPIO.add_event_detect(pin_id, GPIO.FALLING, callback=self._on_falling_edge, bouncetime=bounce_time)
         logging.debug(f'Configured pin {pin_id} on GPIO.')
 
     def _on_rising_edge(self, pin_id: int) -> None:
