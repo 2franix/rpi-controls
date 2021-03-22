@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
 from __future__ import annotations
-from rpicontrols import GpioDriver, Controller, Button, PullType
-from unittest.mock import MagicMock, call
+from rpicontrols import GpioDriver, Controller, Button, PullType # Public type.
+from rpicontrols import gpio_driver # To access internal types.
+from unittest.mock import MagicMock, Mock, call, PropertyMock, patch
 import pytest
 import time
 import asyncio
@@ -13,7 +14,7 @@ from typing import Optional, Callable, Coroutine, Any, Generator, Iterable
 class GpioDriverMock(GpioDriver):
     def __init__(self):
         self._pin_states: Map[int, bool] = {}
-        self._edge_callback: Callable[[int], None] = None
+        self._edge_callback: Callable[[int, gpio_driver.EdgeType], None] = None
 
     @property
     def configured_pins(self) -> Iterable[int]:
@@ -22,7 +23,7 @@ class GpioDriverMock(GpioDriver):
     def configure_button(self, pin_id: int, pull: PullType) -> None:
         self._pin_states[pin_id] = False
 
-    def set_edge_callback(self, callback: Callable[[int], None]):
+    def set_edge_callback(self, callback: Callable[[int, gpio_driver.EdgeType], None]):
         self._edge_callback = callback
 
     def input(self, pin_id: int) -> bool:
@@ -32,7 +33,7 @@ class GpioDriverMock(GpioDriver):
         if self._pin_states[pin_id] != state:
             self._pin_states[pin_id] = state
             if self._edge_callback:
-                self._edge_callback(pin_id)
+                self._edge_callback(pin_id, gpio_driver.EdgeType.RISING if state else gpio_driver.EdgeType.FALLING)
             else:
                 raise Exception('Edge callback not set yet. Test is probably misconfigured.')
 
@@ -42,11 +43,22 @@ class TestController:
         return GpioDriverMock()
 
     @pytest.fixture
-    def contrller(self, gpio_driver_mock: GpioDriverMock) -> Controller:
+    def contrller(self, gpio_driver_mock: GpioDriverMock) -> Generator[Controller, None, None]:
         c = Controller(gpio_driver_mock)
         c.iteration_sleep = 0.01
+
         assert c.status == Controller.Status.READY
-        return c
+
+        # Wrap buttons to intercept calls to the their update() method.
+        original_make_button = c.make_button
+        def make_mocked_button(id, type, pullupdown, name=None):
+            b = original_make_button(id, type, pullupdown, name)
+            b.update = Mock(wraps=b.update)
+            return b
+
+        controllerAsAny: Any = c
+        controllerAsAny.make_button = Mock(side_effect=make_mocked_button)
+        yield c
 
     @pytest.fixture
     def controller_in_thread(self, contrller: Controller) -> Generator[Controller, None, None]:
@@ -78,7 +90,9 @@ class TestController:
 
         # Create two buttons.
         button10 = controller_in_thread.make_button(10, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
-        button11 = controller_in_thread .make_button(11, Button.InputType.PRESSED_WHEN_OFF, PullType.NONE)
+        # button10.update = Mock(wraps=button10.update)
+        button11 = controller_in_thread.make_button(11, Button.InputType.PRESSED_WHEN_OFF, PullType.NONE)
+        # button11.update = Mock(wraps=button11.update)
 
         # According to our GPIO mock, their GPIO pins are not active.
         assert not button10.pressed # Normally open.
@@ -86,6 +100,8 @@ class TestController:
 
         # Alter mock so that pin of first button is now active.
         controller_in_thread.driver.set_pin_state(10, True)
+        button10.update.assert_called_once()
+        button11.update.assert_not_called()
 
         # Give some time for the controller to update.
         time.sleep(0.1)
@@ -93,10 +109,14 @@ class TestController:
         # Check pressed state again.
         assert button10.pressed
         assert button11.pressed # Normally closed.
+        button10.update.assert_called_once()
+        button11.update.assert_not_called()
 
         # Alter mock once again so that both pins are active and wait for
         # update. Last, check button states.
         controller_in_thread.driver.set_pin_state(11, True)
+        button10.update.assert_called_once()
+        button11.update.assert_called_once()
         time.sleep(0.1)
         assert button10.pressed
         assert not button11.pressed
