@@ -129,7 +129,7 @@ class Controller:
             raise Exception(f'Several buttons correspond to pin {pin_id}.')
         return buttons[0]
 
-    def _on_gpio_edge(self, pin_id: int) -> None:
+    def _on_gpio_edge(self, pin_id: int, edge: gpio_driver.EdgeType) -> None:
         with self._status_lock:
             # Maybe raise new events. Make sure the controller cannot stop in
             # the meantime.
@@ -138,13 +138,14 @@ class Controller:
                 get_logger().info(f'Ignoring edge for GPIO pin {pin_id} because no button is registered for it.')
                 return
             with self._scheduled_updates_condition:
-                self._update_button(button)
+                self._update_button(button, edge == gpio_driver.EdgeType.RISING)
                 if button.scheduled_update_time != 0:
                     self._scheduled_updates_condition.notify()
 
-    def _update_button(self, button: Button, raise_events: bool=True):
+    def _update_button(self, button: Button, pin_input: typing.Optional[bool]=None, raise_events: bool=True) -> None:
         if self._status != Controller.Status.RUNNING: return
-        event_futures: typing.List[concurrent.futures.Future] = button.update(self._event_loop if raise_events else None, self.driver)
+        actual_pin_input: bool = pin_input if not pin_input is None else self.driver.input(button.pin_id)
+        event_futures: typing.List[concurrent.futures.Future] = button.update(self._event_loop if raise_events else None, actual_pin_input)
         self._running_event_handlers += event_futures
 
     def start_in_thread(self) -> None:
@@ -261,10 +262,9 @@ class Button:
     def long_pressed(self) -> bool:
         return self._long_pressed
 
-    def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], gpio_driver: gpio_driver.GpioDriver) -> typing.List[concurrent.futures.Future]:
+    def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], pin_input: bool) -> typing.List[concurrent.futures.Future]:
         was_pressed: bool = self._pressed
         was_long_pressed: bool = self._long_pressed
-        pin_input: bool = gpio_driver.input(self.pin_id)
         new_pressed: bool = pin_input if self._input_type == Button.InputType.PRESSED_WHEN_ON else not pin_input
         self._pressed = new_pressed
         if not self._pressed: self._long_pressed = False

@@ -9,6 +9,10 @@ class PullType(enum.Enum):
     UP = 2
     DOWN = 3
 
+class EdgeType(enum.Enum):
+    RISING = 1
+    FALLING = 2
+
 class GpioDriver:
     def input(self, pin_id: int) -> bool:
         raise NotImplementedError("Missing function 'input'.")
@@ -16,5 +20,5 @@ class GpioDriver:
     def configure_button(self, pin_id: int, pull: PullType) -> None:
         raise NotImplementedError("Missing function 'configure_button'.")
 
-    def set_edge_callback(self, callback: Callable[[int], None]):
+    def set_edge_callback(self, callback: Callable[[int, EdgeType], None]):
         raise NotImplementedError("Missing function 'set_edge_callback'.")

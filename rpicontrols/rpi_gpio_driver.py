@@ -9,7 +9,7 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
     def __init__(self):
         gpio_driver.GpioDriver.__init__(self)
         GPIO.setmode(GPIO.BOARD)
-        self._edge_callback = None
+        self._edge_callback: Callable[[int, gpio_driver.EdgeType], None] = None
 
     def input(self, pin_id: int) -> bool:
         input_value: bool = GPIO.input(pin_id)
@@ -29,12 +29,19 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
 
         GPIO.setup(pin_id, GPIO.IN, pull_up_down=pull_up_down)
         GPIO.add_event_detect(pin_id, GPIO.BOTH)
-        GPIO.add_event_callback(pin_id, callback=self._on_edge)
+        GPIO.add_event_callback(pin_id, edge=GPIO.RISING, callback=self._on_rising_edge)
+        GPIO.add_event_callback(pin_id, edge=GPIO.FALLING, callback=self._on_falling_edge)
         logging.debug(f'Configured pin {pin_id} on GPIO.')
 
-    def _on_edge(self, pin_id: int) -> None:
-        if self._edge_callback:
-            self._edge_callback(pin_id)
+    def _on_rising_edge(self, pin_id: int) -> None:
+        self._on_edge(pin_id, gpio_driver.EdgeType.RISING)
 
-    def set_edge_callback(self, callback: Callable[[int], None]):
+    def _on_falling_edge(self, pin_id: int) -> None:
+        self._on_edge(pin_id, gpio_driver.EdgeType.FALLING)
+
+    def _on_edge(self, pin_id: int, edge: gpio_driver.EdgeType) -> None:
+        if self._edge_callback:
+            self._edge_callback(pin_id, edge)
+
+    def set_edge_callback(self, callback: Callable[[int, gpio_driver.EdgeType], None]):
         self._edge_callback = callback
