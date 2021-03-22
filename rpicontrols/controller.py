@@ -71,7 +71,9 @@ class Controller:
                     time.sleep(sleep_time)
             else:
                 with self._scheduled_updates_condition:
+                    get_logger().debug(f'Thread for scheduled updates going to sleep.')
                     self._scheduled_updates_condition.wait()
+                    get_logger().debug(f'Thread for scheduled updates wakes up.')
 
     def make_button(self,
             input_pin_id: int,

@@ -3,7 +3,7 @@
 import RPi.GPIO as GPIO
 from . import gpio_driver
 import logging
-from typeing import Callable
+from typing import Callable
 
 class RpiGpioDriver(gpio_driver.GpioDriver):
     def __init__(self):
