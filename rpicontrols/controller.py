@@ -235,7 +235,7 @@ class Button:
         self._double_click_handlers: Button.EventHandlerList = []
         # Maximum elapsed seconds between a press and the second release to qualify
         # for a double click.
-        self.double_click_timeout: float = 0.4
+        self.double_click_timeout: float = 0.5
         # Number of seconds a press must be maintained to qualify as a long
         # press.
         self.long_press_timeout: float = 0.5
