@@ -132,6 +132,7 @@ class Controller:
         return buttons[0]
 
     def _on_gpio_edge(self, pin_id: int, edge: gpio_driver.EdgeType) -> None:
+        get_logger().debug(f'edge start: {edge} on pin {pin_id}')
         with self._status_lock:
             # Maybe raise new events. Make sure the controller cannot stop in
             # the meantime.
@@ -143,6 +144,7 @@ class Controller:
                 self._update_button(button, edge == gpio_driver.EdgeType.RISING)
                 if button.scheduled_update_time != 0:
                     self._scheduled_updates_condition.notify()
+        get_logger().debug(f'edge end: {edge} on pin {pin_id}')
 
     def _update_button(self, button: Button, pin_input: typing.Optional[bool]=None, raise_events: bool=True) -> None:
         if self._status != Controller.Status.RUNNING: return
@@ -158,9 +160,6 @@ class Controller:
 
     def run(self) -> None:
         """Runs the engine controlling the GPIO.
-
-        Keyword arguments:
-        should_stop -- function evaluated at the end of every iteration to determine if the mainloop should break.
         """
         get_logger().info('Starting the controller...')
         with self._status_lock:
@@ -276,14 +275,17 @@ class Button:
         if self.scheduled_update_time < current_time:
             self._schedule_update(0.0)
 
+        def log_state(new_state: str):
+            get_logger().debug(f'Button {self.name} [{self.pin_id}] is {new_state}.')
+
         event_futures: typing.List[concurrent.futures.Future] = []
         if self._pressed and not was_pressed: # PRESS
             # Record time of this new press.
-            get_logger().debug(f'Button {self.pin_id} is pressed.')
+            log_state("pressed")
             self._press_times.append(current_time)
             self.raise_event('press', event_loop, self._press_handlers, event_futures)
         elif not self._pressed and was_pressed: # RELEASE
-            get_logger().debug(f'Button {self.pin_id} is released.')
+            log_state("released")
             self._release_times.append(current_time)
             self.raise_event('release', event_loop, self._release_handlers, event_futures)
 
@@ -292,7 +294,7 @@ class Button:
             last_press_time: float = self._press_times[-1]
             if not self._long_pressed: # Raise event only once per press!
                 if current_time - last_press_time > self.long_press_timeout: # Press lasted long enough?
-                    get_logger().debug(f'Button {self.pin_id} is long-pressed.')
+                    log_state("long-pressed")
                     self._long_pressed = True
                     self.raise_event('long press', event_loop, self._long_press_handlers, event_futures)
                 else:
@@ -303,7 +305,7 @@ class Button:
         if (not self._pressed and was_pressed # DOUBLE_CLICK
             and len(self._press_times) >= 2 # Was pressed not long ago.
             and current_time - self._press_times[-2] < self.double_click_timeout): # First of two presses was not too long ago.
-            get_logger().debug(f'Button {self.pin_id} is double-clicked.')
+            log_state("double-clicked")
             self.raise_event('double click', event_loop, self._double_click_handlers, event_futures)
             # Consume press times not to reuse them in further events.
             self._press_times.clear()
@@ -316,7 +318,7 @@ class Button:
             if last_release > last_press: # Was pressed then released. May now be pressed again so checking self.pressed is not enough!
                 if current_time - last_press >= self.double_click_timeout:
                     # Last press cannot qualify as a double click anymore.
-                    get_logger().debug(f'Button {self.pin_id} is clicked.')
+                    log_state("clicked")
                     self.raise_event('click', event_loop, self._click_handlers, event_futures)
                     # Consume press times not to reuse them in further events.
                     self._press_times.clear()

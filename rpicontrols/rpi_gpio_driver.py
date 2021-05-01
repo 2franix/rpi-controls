@@ -4,6 +4,7 @@ import RPi.GPIO as GPIO
 from . import gpio_driver
 import logging
 from typing import Callable
+import time
 
 class RpiGpioDriver(gpio_driver.GpioDriver):
     def __init__(self):
@@ -28,11 +29,12 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
             raise Exception('Unsupported pull type {pull}')
 
         GPIO.setup(pin_id, GPIO.IN, pull_up_down=pull_up_down)
-        bounce_time = 7 # milliseconds
-        GPIO.add_event_detect(pin_id, GPIO.BOTH, callback=self._on_edge, bouncetime=bounce_time)
+        GPIO.add_event_detect(pin_id, GPIO.BOTH, callback=self._on_edge)
         logging.debug(f'Configured pin {pin_id} on GPIO.')
 
     def _on_edge(self, pin_id: int) -> None:
+        bounce_time = 0.010 #seconds => 10 milliseconds
+        time.sleep(bounce_time)
         edge: gpio_driver.EdgeType = gpio_driver.EdgeType.RISING if GPIO.input(pin_id) else gpio_driver.EdgeType.FALLING
         if self._edge_callback:
             self._edge_callback(pin_id, edge)
