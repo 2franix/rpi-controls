@@ -4,8 +4,9 @@
 name: Upload Python Package (TestPyPI)
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+        - main
 
 jobs:
   deploy:
@@ -22,6 +23,7 @@ jobs:
       run: |
         sudo apt install tox
         python -m pip install --upgrade pip
+        python -m pip install build
         pip install setuptools wheel twine
     - name: Build and publish
       env:
