@@ -7,6 +7,7 @@ TESTS-*.xml
 *.egg-info
 dist/
 build/
+.mypy_cache/
 
 # Vim tags
 tags

@@ -3,6 +3,7 @@
 from __future__ import annotations
 import enum
 from typing import Callable
+from abc import ABC, abstractmethod
 
 class PullType(enum.Enum):
     NONE = 1
@@ -13,12 +14,19 @@ class EdgeType(enum.Enum):
     RISING = 1
     FALLING = 2
 
-class GpioDriver:
+class GpioDriver(ABC):
+    @abstractmethod
     def input(self, pin_id: int) -> bool:
-        raise NotImplementedError("Missing function 'input'.")
+        pass
 
-    def configure_button(self, pin_id: int, pull: PullType) -> None:
-        raise NotImplementedError("Missing function 'configure_button'.")
+    @abstractmethod
+    def configure_button(self, pin_id: int, pull: PullType, bounce_time: int) -> None:
+        pass
 
+    @abstractmethod
+    def unconfigure_button(self, pin_id: int) -> None:
+        pass
+
+    @abstractmethod
     def set_edge_callback(self, callback: Callable[[int, EdgeType], None]):
-        raise NotImplementedError("Missing function 'set_edge_callback'.")
+        pass

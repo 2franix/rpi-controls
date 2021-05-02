@@ -79,7 +79,8 @@ class Controller:
             input_pin_id: int,
             input: Button.InputType,
             pull: gpio_driver.PullType,
-            name: typing.Optional[str] = None) -> Button:
+            name: typing.Optional[str] = None,
+            bounce_time: int = 0) -> Button:
         button = Button(input_pin_id, input, name)
 
         self.driver.configure_button(input_pin_id, pull)
@@ -175,30 +176,6 @@ class Controller:
         get_logger().debug('Async event loop for event handlers started.')
         self._event_loop.run_forever()
         get_logger().debug('Async event loop for event handlers is now stopped.')
-        # while True:
-            # with self._status_lock:
-                # # Exit GPIO monitoring loop as soon as stop is requested.
-                # if self._status != Controller.Status.RUNNING:
-                    # get_logger().info('Stop requested, aborting the GPIO monitoring loop.')
-                    # break
-# 
-                # # Clean up old event tasks.
-                # for complete_event in [future for future in self._running_event_handlers if future.done()]:
-                    # self._running_event_handlers.remove(complete_event)
-# 
-            # if self._status == Controller.Status.RUNNING:
-                # time.sleep(self.iteration_sleep)
-
-        # Wait for any event handlers to complete.
-        #if not kills_running_events:
-        # if self._running_event_handlers:
-            # get_logger().debug('Waiting for currently running event handlers to complete...')
-# 
-            # # Convert concurrent futures to asyncio ones. Can be done here since
-            # # we are in an async event loop.
-            # while [handler_future for handler_future in self._running_event_handlers if not handler_future.done()]:
-                # time.sleep(0.01)
-            # get_logger().debug('All event handlers are now complete.')
 
         with self._status_lock:
             self._status = Controller.Status.STOPPED
