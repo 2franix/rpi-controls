@@ -53,6 +53,10 @@ class Controller:
     def status(self) -> Controller.Status:
         return self._status
 
+    @property
+    def buttons(self) -> typing.List[Button]:
+        return self._buttons
+
     def _scheduled_updates_thread_main(self) -> None:
         while self._status in (Controller.Status.READY, Controller.Status.RUNNING):
             # Immediately update buttons that need it.

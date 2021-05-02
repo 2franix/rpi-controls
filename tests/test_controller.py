@@ -76,6 +76,16 @@ class TestController:
         contrller.stop(wait=True)
         assert contrller.status == Controller.Status.STOPPED
 
+    def test_button_deletion(self, contrller: Controller) -> None:
+        button = contrller.make_button(10, Button.InputType.PRESSED_WHEN_ON, PullType.UP)
+        assert contrller.buttons == [button]
+        contrller.delete_button(button)
+        assert not contrller.buttons
+
+        # Delete nonexistent button => error.
+        with pytest.raises(ValueError):
+            contrller.delete_button(button)
+
     def test_button_name(self, contrller: Controller) -> None:
         button_with_default_name = contrller.make_button(10, Button.InputType.PRESSED_WHEN_ON, PullType.UP)
         assert button_with_default_name.name == 'button for pin 10'
@@ -264,7 +274,7 @@ class TestController:
     @pytest.mark.asyncio
     @pytest.mark.timeout(5)
     async def test_exception_in_event_handler_when_stopping(self, controller_in_thread: Controller) -> None:
-        """Makes sure the controller handles in exceptions thrown by event handlers."""
+        """Makes sure the controller handles exceptions thrown by event handlers."""
 
         # Setup mocked GPIO driver.
         def pressed(state: bool) -> None:
