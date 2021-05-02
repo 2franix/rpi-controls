@@ -46,7 +46,7 @@ class TestController:
         return GpioDriverMock()
 
     @pytest.fixture
-    def contrller(self, gpio_driver_mock: GpioDriverMock) -> Generator[Controller, None, None]:
+    def controller(self, gpio_driver_mock: GpioDriverMock) -> Generator[Controller, None, None]:
         c = Controller(gpio_driver_mock)
         c.iteration_sleep = 0.01
 
@@ -64,39 +64,39 @@ class TestController:
         yield c
 
     @pytest.fixture
-    def controller_in_thread(self, contrller: Controller) -> Generator[Controller, None, None]:
+    def controller_in_thread(self, controller: Controller) -> Generator[Controller, None, None]:
         # Start controller in a separate thread.
-        contrller.start_in_thread()
-        assert contrller.status == Controller.Status.RUNNING
+        controller.start_in_thread()
+        assert controller.status == Controller.Status.RUNNING
 
         # Let the test use it.
-        yield contrller
+        yield controller
 
         # Stop it.
-        contrller.stop(wait=True)
-        assert contrller.status == Controller.Status.STOPPED
+        controller.stop(wait=True)
+        assert controller.status == Controller.Status.STOPPED
 
-    def test_button_deletion(self, contrller: Controller) -> None:
-        button = contrller.make_button(10, Button.InputType.PRESSED_WHEN_ON, PullType.UP)
-        assert contrller.buttons == [button]
-        contrller.delete_button(button)
-        assert not contrller.buttons
+    def test_button_deletion(self, controller: Controller) -> None:
+        button = controller.make_button(10, Button.InputType.PRESSED_WHEN_ON, PullType.UP)
+        assert controller.buttons == [button]
+        controller.delete_button(button)
+        assert not controller.buttons
 
         # Delete nonexistent button => error.
         with pytest.raises(ValueError):
-            contrller.delete_button(button)
+            controller.delete_button(button)
 
-    def test_button_name(self, contrller: Controller) -> None:
-        button_with_default_name = contrller.make_button(10, Button.InputType.PRESSED_WHEN_ON, PullType.UP)
+    def test_button_name(self, controller: Controller) -> None:
+        button_with_default_name = controller.make_button(10, Button.InputType.PRESSED_WHEN_ON, PullType.UP)
         assert button_with_default_name.name == 'button for pin 10'
-        button_with_explicit_name = contrller.make_button(11, Button.InputType.PRESSED_WHEN_ON, PullType.DOWN, 'Light ON/OFF')
+        button_with_explicit_name = controller.make_button(11, Button.InputType.PRESSED_WHEN_ON, PullType.DOWN, 'Light ON/OFF')
         assert button_with_explicit_name.name == 'Light ON/OFF'
 
-    def test_button_configuration(self, contrller) -> None:
+    def test_button_configuration(self, controller) -> None:
         """Checks the GPIO driver is used to configure a new button."""
-        button = contrller.make_button(12, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
-        assert len(contrller.driver.configured_pins) == 1
-        assert 12 in contrller.driver.configured_pins
+        button = controller.make_button(12, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
+        assert len(controller.driver.configured_pins) == 1
+        assert 12 in controller.driver.configured_pins
 
     def test_button_update(self, controller_in_thread) -> None:
         """Checks that buttons update their pressed state as expected."""
