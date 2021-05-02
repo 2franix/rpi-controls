@@ -20,8 +20,11 @@ class GpioDriverMock(GpioDriver):
     def configured_pins(self) -> Iterable[int]:
         return self._pin_states.keys()
 
-    def configure_button(self, pin_id: int, pull: PullType) -> None:
+    def configure_button(self, pin_id: int, pull: PullType, bounce_time: int) -> None:
         self._pin_states[pin_id] = False
+
+    def unconfigure_button(self, pin_id: int) -> None:
+        del self._pin_states[pin_id]
 
     def set_edge_callback(self, callback: Callable[[int, gpio_driver.EdgeType], None]):
         self._edge_callback = callback

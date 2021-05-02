@@ -83,7 +83,7 @@ class Controller:
             bounce_time: int = 0) -> Button:
         button = Button(input_pin_id, input, name)
 
-        self.driver.configure_button(input_pin_id, pull)
+        self.driver.configure_button(input_pin_id, pull, bounce_time)
         get_logger().debug(f'New button configured for pin {input_pin_id}')
 
         # Do an initial update to initialize the internal state of the button.
@@ -92,6 +92,12 @@ class Controller:
         self._update_button(button, raise_events=False)
         self._buttons.append(button)
         return button
+
+    def delete_button(self, button: Button) -> None:
+        if not button in self._buttons:
+            raise ValueError(f'Button {button.name} is not registered in this controller.')
+        self.driver.unconfigure_button(button.pin_id)
+        self._buttons.remove(button)
 
     def stop(self, wait = False, kills_running_events: bool = False) -> None:
         get_logger().info('Stopping controller...')
