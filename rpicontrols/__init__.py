@@ -21,6 +21,7 @@ from .gpio_driver import GpioDriver, PullType
 
 # Define public modules and functions.
 __all__: typing.Sequence[str] = [m.__name__ for m in (Controller, Button, GpioDriver, PullType)] + ['make_controller']
+__version__ = '1.0.0'
 
 def make_controller(gpio_driver: GpioDriver = None) -> Controller:
     if not gpio_driver:
