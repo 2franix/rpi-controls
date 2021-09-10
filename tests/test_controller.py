@@ -1,19 +1,19 @@
 #!/usr/bin/python3
 
 from __future__ import annotations
-from rpicontrols import GpioDriver, Controller, Button, PullType # Public type.
-from rpicontrols import gpio_driver # To access internal types.
-from unittest.mock import MagicMock, Mock, call, PropertyMock, patch
+from unittest.mock import Mock
 import pytest
 import time
 import asyncio
-import threading
-import logging
-from typing import Optional, Callable, Coroutine, Any, Generator, Iterable
+from typing import Optional, Callable, Coroutine, Any, Generator, Iterable, Dict
+
+from rpicontrols import GpioDriver, Controller, Button, PullType  # Public type.
+from rpicontrols import gpio_driver  # To access internal types.
+
 
 class GpioDriverMock(GpioDriver):
     def __init__(self):
-        self._pin_states: Map[int, bool] = {}
+        self._pin_states: Dict[int, bool] = {}
         self._edge_callback: Callable[[int, gpio_driver.EdgeType], None] = None
 
     @property
@@ -40,6 +40,7 @@ class GpioDriverMock(GpioDriver):
             else:
                 raise Exception('Edge callback not set yet. Test is probably misconfigured.')
 
+
 class TestController:
     @pytest.fixture
     def gpio_driver_mock(self) -> GpioDriverMock:
@@ -54,6 +55,7 @@ class TestController:
 
         # Wrap buttons to intercept calls to the their update() method.
         original_make_button = c.make_button
+
         def make_mocked_button(id, type, pullupdown, name=None):
             b = original_make_button(id, type, pullupdown, name)
             b.update = Mock(wraps=b.update)
@@ -94,7 +96,7 @@ class TestController:
 
     def test_button_configuration(self, controller) -> None:
         """Checks the GPIO driver is used to configure a new button."""
-        button = controller.make_button(12, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
+        controller.make_button(12, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
         assert len(controller.driver.configured_pins) == 1
         assert 12 in controller.driver.configured_pins
 
@@ -108,8 +110,8 @@ class TestController:
         # button11.update = Mock(wraps=button11.update)
 
         # According to our GPIO mock, their GPIO pins are not active.
-        assert not button10.pressed # Normally open.
-        assert button11.pressed # Normally closed.
+        assert not button10.pressed  # Normally open.
+        assert button11.pressed  # Normally closed.
 
         # Alter mock so that pin of first button is now active.
         controller_in_thread.driver.set_pin_state(10, True)
@@ -121,7 +123,7 @@ class TestController:
 
         # Check pressed state again.
         assert button10.pressed
-        assert button11.pressed # Normally closed.
+        assert button11.pressed  # Normally closed.
         button10.update.assert_called_once()
         button11.update.assert_not_called()
 
@@ -156,16 +158,17 @@ class TestController:
     def test_press_release_click_events(self, controller_in_thread: Controller) -> None:
         # Setup mocked GPIO driver.
         def pressed(state: bool) -> None:
-            driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+            driver: Any = controller_in_thread.driver  # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
             driver.set_pin_state(2, state)
 
         # Create a button and subscribe to its events.
         button: Button = controller_in_thread.make_button(2, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
+
         async def wait_2_secs():
             # Waste some time to check that events are queued until they can
             # run.
             await asyncio.sleep(2)
-        listener = ButtonListener(button, common_event_handler = wait_2_secs)
+        listener = ButtonListener(button, common_event_handler=wait_2_secs)
 
         # Give the controller some time to update. Event should not be raised.
         iteration_sleep = controller_in_thread.iteration_sleep * 2
@@ -178,19 +181,19 @@ class TestController:
         press_time = time.time()
         assert button.pressed
         time.sleep(0.3)
-        listener.assert_calls(press = 1)
+        listener.assert_calls(press=1)
 
         # Release button => event should not be called until double click
         # timeout is reached.
         pressed(False)
         time.sleep(0.9*button.double_click_timeout - time.time() + press_time)
         assert not button.pressed
-        listener.assert_calls(press = 1, release = 1)
+        listener.assert_calls(press=1, release=1)
 
         # Now double click timeout has been reached, click should happen.
         time.sleep(0.4*button.double_click_timeout)
         assert not button.pressed
-        listener.assert_calls(press = 1, release = 1, click = 1)
+        listener.assert_calls(press=1, release=1, click=1)
 
         # Click again. Event handler should be called immediately, even though
         # the first execution is still running.
@@ -200,22 +203,23 @@ class TestController:
         pressed(False)
         time.sleep(1.1 * (button.double_click_timeout - time.time() + press_time))
         assert not button.pressed
-        listener.assert_calls(press = 2, release = 2, click = 2)
+        listener.assert_calls(press=2, release=2, click=2)
 
     @pytest.mark.timeout(7)
     def test_long_press_double_click_events(self, controller_in_thread: Controller) -> None:
         # Setup mocked GPIO driver.
         def pressed(state: bool) -> None:
-            driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+            driver: Any = controller_in_thread.driver  # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
             driver.set_pin_state(2, state)
 
         # Create a button and subscribe to its click event.
         button: Button = controller_in_thread.make_button(2, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
         button.long_press_timeout = 0.4
         button.double_click_timeout = 0.3
+
         async def wait_2_secs():
             await asyncio.sleep(2)
-        listener = ButtonListener(button, common_event_handler = wait_2_secs)
+        listener = ButtonListener(button, common_event_handler=wait_2_secs)
 
         # Give the controller some time to update. Event should not be raised.
         iteration_sleep = controller_in_thread.iteration_sleep * 2
@@ -227,7 +231,7 @@ class TestController:
         assert button.pressed
         time.sleep(button.long_press_timeout + iteration_sleep)
         assert button.long_pressed
-        listener.assert_calls(press = 1, long_press = 1)
+        listener.assert_calls(press=1, long_press=1)
 
         # Release button, click event should be raised immediately since
         # the double click timeout has been reached (it's too late to hope for a
@@ -236,24 +240,25 @@ class TestController:
         time.sleep(iteration_sleep)
         assert not button.pressed
         assert not button.long_pressed
-        listener.assert_calls(press = 1, long_press = 1, release = 1, click = 1)
+        listener.assert_calls(press=1, long_press=1, release=1, click=1)
 
         # Perform a double click.
-        assert not button.pressed # Make sure we start off with the expected state.
+        assert not button.pressed  # Make sure we start off with the expected state.
         for i in range(4):
             pressed(not controller_in_thread.driver.input(2))
             time.sleep(iteration_sleep)
-        listener.assert_calls(press = 3, long_press = 1, release = 3, click = 1, double_click = 1)
+        listener.assert_calls(press=3, long_press=1, release=3, click=1, double_click=1)
 
     def test_exception_in_event_handler(self, controller_in_thread: Controller) -> None:
         """Makes sure the controller handles in exceptions thrown by event handlers."""
         # Setup mocked GPIO driver.
         def pressed(state: bool) -> None:
-            driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+            driver: Any = controller_in_thread.driver  # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
             driver.set_pin_state(2, state)
 
         # Create a button and subscribe to its events.
         button: Button = controller_in_thread.make_button(2, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
+
         async def raise_exception():
             raise Exception('Mocks a problem in the event handler!')
         listener = ButtonListener(button, common_event_handler=raise_exception)
@@ -269,7 +274,7 @@ class TestController:
         # is still alive.
         pressed(False)
         time.sleep(iteration_sleep)
-        listener.assert_calls(press = 1, release = 1)
+        listener.assert_calls(press=1, release=1)
 
     @pytest.mark.asyncio
     @pytest.mark.timeout(5)
@@ -278,7 +283,7 @@ class TestController:
 
         # Setup mocked GPIO driver.
         def pressed(state: bool) -> None:
-            driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+            driver: Any = controller_in_thread.driver  # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
             driver.set_pin_state(2, state)
 
         # Create a button and subscribe to its events.
@@ -299,10 +304,10 @@ class TestController:
         listener = ButtonListener(button, common_event_handler=raise_exception_with_delay)
         pressed(True)
         iteration_sleep = controller_in_thread.iteration_sleep * 2
-        await asyncio.sleep(iteration_sleep) # So that event is raised BEFORE stopping.
-        controller_in_thread.stop(wait=True) # Explicit stop as this is part of the tested scenario. But the fixture would have stopped it anyway.
+        await asyncio.sleep(iteration_sleep)  # So that event is raised BEFORE stopping.
+        controller_in_thread.stop(wait=True)  # Explicit stop as this is part of the tested scenario. But the fixture would have stopped it anyway.
         assert controller_in_thread.status == Controller.Status.STOPPED
-        listener.assert_calls(press = 1)
+        listener.assert_calls(press=1)
 
     @pytest.mark.asyncio
     @pytest.mark.timeout(5)
@@ -311,7 +316,7 @@ class TestController:
 
         # Setup mocked GPIO driver.
         def pressed(state: bool) -> None:
-            driver: Any = controller_in_thread.driver # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
+            driver: Any = controller_in_thread.driver  # Downgrades type hint to allow assignment of the input method (see mypy issue 2427)
             driver.set_pin_state(2, state)
 
         # Create a button and subscribe to its events.
@@ -320,19 +325,20 @@ class TestController:
         listener = ButtonListener(button)
         pressed(True)
         iteration_sleep = controller_in_thread.iteration_sleep * 2
-        await asyncio.sleep(iteration_sleep) # So that event is raised BEFORE stopping.
+        await asyncio.sleep(iteration_sleep)  # So that event is raised BEFORE stopping.
         controller_in_thread.stop(wait=True)
         assert controller_in_thread.status == Controller.Status.STOPPED
-        listener.assert_calls(press = 1)
+        listener.assert_calls(press=1)
 
         # Release button. Since controller is stopped, no new event is expected.
         pressed(False)
         await asyncio.sleep(iteration_sleep)
-        listener.assert_calls(press = 1)
+        listener.assert_calls(press=1)
+
 
 class ButtonListener:
     def __init__(self, button: Button, common_event_handler: Callable[[], Coroutine[Any, Any, Any]] = None):
-        assert not button is None
+        assert button is not None
         self.button: Button = button
         self.press_call_count: int = 0
         self.press_sync_call_count: int = 0
@@ -345,7 +351,7 @@ class ButtonListener:
         self.double_click_call_count: int = 0
         self.double_click_sync_call_count: int = 0
         self.button.add_on_press(self.on_press)
-        self.button.add_on_press(self.on_press_sync) # Synchronous event handler
+        self.button.add_on_press(self.on_press_sync)  # Synchronous event handler
         self.button.add_on_long_press(self.on_long_press)
         self.button.add_on_long_press(self.on_long_press_sync)
         self.button.add_on_release(self.on_release)
@@ -362,7 +368,7 @@ class ButtonListener:
 
     # Don't assert press/long_press states in those callbacks
     # as state can already have changed by the time the callback
-    # is actually called. Tests could wait a little 
+    # is actually called. Tests could wait a little
     # before changing state but it would still be unreliable.
     async def on_press(self, button: Button) -> None:
         assert button == self.button

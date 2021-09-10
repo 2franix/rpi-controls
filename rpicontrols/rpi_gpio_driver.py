@@ -6,12 +6,13 @@ import logging
 from typing import Callable, Optional
 import time
 
+
 class RpiGpioDriver(gpio_driver.GpioDriver):
     def __init__(self):
         gpio_driver.GpioDriver.__init__(self)
         GPIO.setmode(GPIO.BOARD)
         self._edge_callback: Callable[[int, gpio_driver.EdgeType], None] = None
-        self._bounce_times: dict[int, int] = {} # Bounce time in ms indexed by pin id.
+        self._bounce_times: dict[int, int] = {}  # Bounce time in ms indexed by pin id.
 
     def input(self, pin_id: int) -> bool:
         input_value: bool = GPIO.input(pin_id)
@@ -44,7 +45,7 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
         logging.debug(f'Configured pin {pin_id} on GPIO.')
 
     def unconfigure_button(self, pin_id: int) -> None:
-        if not pin_id in self._bounce_times:
+        if pin_id not in self._bounce_times:
             raise Exception(f'No button configured for pin {pin_id}.')
         del self._bounce_times[pin_id]
         GPIO.remove_event_detect(pin_id)
@@ -52,7 +53,8 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
     def _on_edge(self, pin_id: int) -> None:
         # In case edge is called while button is being unconfigured, abort.
         bounce_time: Optional[int] = self._bounce_times.get(pin_id)
-        if not bounce_time: return
+        if not bounce_time:
+            return
 
         time.sleep(bounce_time/1000.0)
         edge: gpio_driver.EdgeType = gpio_driver.EdgeType.RISING if GPIO.input(pin_id) else gpio_driver.EdgeType.FALLING

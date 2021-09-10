@@ -1,21 +1,21 @@
 #!/usr/bin/python3
 
-from __future__ import annotations # PEP 563
+from __future__ import annotations  # PEP 563
 import logging
 import time
 import threading
-import subprocess
 import signal
 import asyncio
 import concurrent.futures
 import inspect
-import os
 import enum
 import typing
+
 from . import gpio_driver
-import threading
+
 
 def get_logger(): return logging.getLogger(__name__)
+
 
 class Controller:
     class Status(enum.Enum):
@@ -54,7 +54,7 @@ class Controller:
         return self._status
 
     @property
-    def buttons(self) -> typing.List[Button]:
+    def buttons(self) -> typing.Iterable[Button]:
         return self._buttons
 
     def _scheduled_updates_thread_main(self) -> None:
@@ -75,16 +75,16 @@ class Controller:
                     time.sleep(sleep_time)
             else:
                 with self._scheduled_updates_condition:
-                    get_logger().debug(f'Thread for scheduled updates going to sleep.')
+                    get_logger().debug('Thread for scheduled updates going to sleep.')
                     self._scheduled_updates_condition.wait()
-                    get_logger().debug(f'Thread for scheduled updates wakes up.')
+                    get_logger().debug('Thread for scheduled updates wakes up.')
 
     def make_button(self,
-            input_pin_id: int,
-            input: Button.InputType,
-            pull: gpio_driver.PullType,
-            name: typing.Optional[str] = None,
-            bounce_time: int = 0) -> Button:
+                    input_pin_id: int,
+                    input: Button.InputType,
+                    pull: gpio_driver.PullType,
+                    name: typing.Optional[str] = None,
+                    bounce_time: int = 0) -> Button:
         button = Button(input_pin_id, input, name)
 
         self.driver.configure_button(input_pin_id, pull, bounce_time)
@@ -98,12 +98,12 @@ class Controller:
         return button
 
     def delete_button(self, button: Button) -> None:
-        if not button in self._buttons:
+        if button not in self._buttons:
             raise ValueError(f'Button {button.name} is not registered in this controller.')
         self.driver.unconfigure_button(button.pin_id)
         self._buttons.remove(button)
 
-    def stop(self, wait = False, kills_running_events: bool = False) -> None:
+    def stop(self, wait: bool = False, kills_running_events: bool = False) -> None:
         get_logger().info('Stopping controller...')
         with self._status_lock:
             # Already stopped?
@@ -137,7 +137,8 @@ class Controller:
 
     def _get_button(self, pin_id: int) -> typing.Optional[Button]:
         buttons = [b for b in self._buttons if b.pin_id == pin_id]
-        if not buttons: return None
+        if not buttons:
+            return None
         if len(buttons) > 1:
             raise Exception(f'Several buttons correspond to pin {pin_id}.')
         return buttons[0]
@@ -157,9 +158,10 @@ class Controller:
                     self._scheduled_updates_condition.notify()
         get_logger().debug(f'edge end: {edge} on pin {pin_id}')
 
-    def _update_button(self, button: Button, pin_input: typing.Optional[bool]=None, raise_events: bool=True) -> None:
-        if self._status != Controller.Status.RUNNING: return
-        actual_pin_input: bool = pin_input if not pin_input is None else self.driver.input(button.pin_id)
+    def _update_button(self, button: Button, pin_input: typing.Optional[bool] = None, raise_events: bool = True) -> None:
+        if self._status != Controller.Status.RUNNING:
+            return
+        actual_pin_input: bool = pin_input if pin_input is not None else self.driver.input(button.pin_id)
         event_futures: typing.List[concurrent.futures.Future] = button.update(self._event_loop if raise_events else None, actual_pin_input)
         self._running_event_handlers += event_futures
 
@@ -197,6 +199,7 @@ class Controller:
 
     def _signal_handler(self, signal, frame):
         self.stop(wait=False)
+
 
 class Button:
     class InputType(enum.Enum):
@@ -252,10 +255,10 @@ class Button:
 
     def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], pin_input: bool) -> typing.List[concurrent.futures.Future]:
         was_pressed: bool = self._pressed
-        was_long_pressed: bool = self._long_pressed
         new_pressed: bool = pin_input if self._input_type == Button.InputType.PRESSED_WHEN_ON else not pin_input
         self._pressed = new_pressed
-        if not self._pressed: self._long_pressed = False
+        if not self._pressed:
+            self._long_pressed = False
         current_time: float = time.time()
 
         # Mark button as updated.
@@ -266,21 +269,21 @@ class Button:
             get_logger().debug(f'Button {self.name} [{self.pin_id}] is {new_state}.')
 
         event_futures: typing.List[concurrent.futures.Future] = []
-        if self._pressed and not was_pressed: # PRESS
+        if self._pressed and not was_pressed:  # PRESS
             # Record time of this new press.
             log_state("pressed")
             self._press_times.append(current_time)
             self.raise_event('press', event_loop, self._press_handlers, event_futures)
-        elif not self._pressed and was_pressed: # RELEASE
+        elif not self._pressed and was_pressed:  # RELEASE
             log_state("released")
             self._release_times.append(current_time)
             self.raise_event('release', event_loop, self._release_handlers, event_futures)
 
         # Maybe raise 'long press' event?
-        if self._pressed: # LONG_PRESS
+        if self._pressed:  # LONG_PRESS
             last_press_time: float = self._press_times[-1]
-            if not self._long_pressed: # Raise event only once per press!
-                if current_time - last_press_time > self.long_press_timeout: # Press lasted long enough?
+            if not self._long_pressed:  # Raise event only once per press!
+                if current_time - last_press_time > self.long_press_timeout:  # Press lasted long enough?
                     log_state("long-pressed")
                     self._long_pressed = True
                     self.raise_event('long press', event_loop, self._long_press_handlers, event_futures)
@@ -289,9 +292,9 @@ class Button:
                     self._schedule_update(last_press_time + self.long_press_timeout)
 
         # Maybe raise 'double click' event?
-        if (not self._pressed and was_pressed # DOUBLE_CLICK
-            and len(self._press_times) >= 2 # Was pressed not long ago.
-            and current_time - self._press_times[-2] < self.double_click_timeout): # First of two presses was not too long ago.
+        if (not self._pressed and was_pressed  # DOUBLE_CLICK
+            and len(self._press_times) >= 2  # Was pressed not long ago.
+            and current_time - self._press_times[-2] < self.double_click_timeout):  # First of two presses was not too long ago.
             log_state("double-clicked")
             self.raise_event('double click', event_loop, self._double_click_handlers, event_futures)
             # Consume press times not to reuse them in further events.
@@ -299,10 +302,10 @@ class Button:
             self._release_times.clear()
 
         # Maybe raise 'click' event?
-        if self._press_times and self._release_times: # CLICK
+        if self._press_times and self._release_times:  # CLICK
             last_press: float = self._press_times[-1]
             last_release: float = self._release_times[-1]
-            if last_release > last_press: # Was pressed then released. May now be pressed again so checking self.pressed is not enough!
+            if last_release > last_press:  # Was pressed then released. May now be pressed again so checking self.pressed is not enough!
                 if current_time - last_press >= self.double_click_timeout:
                     # Last press cannot qualify as a double click anymore.
                     log_state("clicked")
@@ -321,8 +324,13 @@ class Button:
         if update_time == 0.0 or self.scheduled_update_time == 0.0 or self.scheduled_update_time > update_time:
             self.scheduled_update_time = update_time
 
-    def raise_event(self, event_name: str, event_loop: typing.Optional[asyncio.AbstractEventLoop], handlers: EventHandlerList, event_futures: typing.List[concurrent.futures.Future]) -> None:
-        if event_loop is None: return
+    def raise_event(self,
+                    event_name: str,
+                    event_loop: typing.Optional[asyncio.AbstractEventLoop],
+                    handlers: EventHandlerList,
+                    event_futures: typing.List[concurrent.futures.Future]) -> None:
+        if event_loop is None:
+            return
         event_futures += [asyncio.run_coroutine_threadsafe(self._call_event_handler(event_name, handler), event_loop) for handler in handlers]
 
     async def _call_event_handler(self, event_name: str, handler: EventHandler):

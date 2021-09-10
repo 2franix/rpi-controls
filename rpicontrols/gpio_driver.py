@@ -5,14 +5,18 @@ import enum
 from typing import Callable
 from abc import ABC, abstractmethod
 
+
 class PullType(enum.Enum):
     NONE = 1
     UP = 2
     DOWN = 3
 
+
 class EdgeType(enum.Enum):
+
     RISING = 1
     FALLING = 2
+
 
 class GpioDriver(ABC):
     @abstractmethod
