@@ -294,7 +294,8 @@ class Button:
         # Maybe raise 'double click' event?
         just_released: bool = not self._pressed and was_pressed
         clicked_twice: bool = len(self._press_times) >= 2  # Was pressed at least twice recently.
-        first_press_recent: bool = current_time - self._press_times[-2] < self.double_click_timeout  # First of two presses was not too long ago.
+        # First of two presses was not too long ago?
+        first_press_recent: bool = clicked_twice and current_time - self._press_times[-2] < self.double_click_timeout
 
         if just_released and clicked_twice and first_press_recent:  # DOUBLE_CLICK
             log_state("double-clicked")
