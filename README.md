@@ -16,18 +16,18 @@ controller: Controller = make_controller()
 
 # Create the button, connected to pin 22.
 button: Button = controller.make_button(
-	pin_id=22,i  # Id of the GPIO pin the button switch is connected to.
-	input=Button.InputType.PRESSED_WHEN_OFF,  # Depends on the physical wiring of the button.
-	pull=PullType.UP  # Whether to enable pull-up or pull-down resistor. Use PullType.NONE to disable.
+    input_pin_id=22,  # Id of the GPIO pin the button switch is connected to.
+    input=Button.InputType.PRESSED_WHEN_OFF,  # Depends on the physical wiring of the button.
+    pull=PullType.UP  # Whether to enable pull-up or pull-down resistor. Use PullType.NONE to disable.
 )
 
 # Define a callback to run when button is clicked.
 def on_click_callback(button: Button) -> None:
-	print(f'Button {button.name} clicked!')
+    print(f'Button {button.name} clicked!')
 
 # Subscribe to the click event.
 button.add_on_click(on_click_callback)
 
 # Start controller main loop. Use controller.start_in_thread() for the non-blocking version.
-controller.run() # Blocks until ctrl+c is hit.
+controller.run()
 ```
