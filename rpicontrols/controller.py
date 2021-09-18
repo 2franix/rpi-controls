@@ -43,7 +43,7 @@ class Controller:
         # For example, after a button is released, the click event must be
         # raised once the double click delay is over (because if a double click
         # occurs, we don't want to raise the click event).
-        self._scheduled_updates_thread: threading.Thread = threading.Thread(target=self._scheduled_updates_thread_main)
+        self._scheduled_updates_thread: threading.Thread = threading.Thread(target=self._scheduled_updates_thread_main, daemon=True)
         # Condition that notifies the thread when something is scheduled.
         self._scheduled_updates_condition: threading.Condition = threading.Condition()
 
