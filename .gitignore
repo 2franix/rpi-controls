@@ -17,3 +17,5 @@ tags
 
 # Vim swap files
 *.sw?
+
+doc/
