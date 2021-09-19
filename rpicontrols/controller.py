@@ -18,7 +18,11 @@ def get_logger(): return logging.getLogger(__name__)
 
 
 class Controller:
+    """Controller of all buttons.
+    """
     class Status(enum.Enum):
+        """Defines the various steps in a controller lifecycle.
+        """
         READY: str = "ready"
         RUNNING: str = "running"
         STOPPING: str = "stopping"
@@ -51,6 +55,8 @@ class Controller:
 
     @property
     def status(self) -> Controller.Status:
+        """Gets the current status of this controller.
+        """
         return self._status
 
     @property
@@ -85,6 +91,11 @@ class Controller:
                     pull: gpio_driver.PullType,
                     name: typing.Optional[str] = None,
                     bounce_time: int = 0) -> Button:
+        """Creates a new button connected to pins of the GPIO.
+
+        Keyword arguments:
+        input_pin_id -- Id of the *input* pin the button is connected to.
+        """
         button = Button(input_pin_id, input, name)
 
         self.driver.configure_button(input_pin_id, pull, bounce_time)
