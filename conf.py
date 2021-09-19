@@ -30,7 +30,9 @@ author = setup_cfg['metadata']['author']
 copyright = f'2021, {author}'
 
 # The full version, including alpha/beta/rc tags
-release = setup_cfg['metadata']['version']
+sys.path.append(os.getcwd())
+import rpicontrols
+release = rpicontrols.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -38,7 +40,6 @@ release = setup_cfg['metadata']['version']
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-sys.path.append(os.getcwd())
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
