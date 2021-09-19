@@ -32,8 +32,6 @@ copyright = f'2021, {author}'
 # The full version, including alpha/beta/rc tags
 release = setup_cfg['metadata']['version']
 
-master_doc = 'README'
-
 
 # -- General configuration ---------------------------------------------------
 
