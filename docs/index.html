@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rpi-controls - RPi’s GPIO buttons &#8212; rpi-controls attr: rpicontrols.__version__ documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="#">rpi-controls attr: rpicontrols.__version__ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rpi-controls - RPi’s GPIO buttons</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="rpi-controls-rpi-s-gpio-buttons">
+<h1>rpi-controls - RPi’s GPIO buttons<a class="headerlink" href="#rpi-controls-rpi-s-gpio-buttons" title="Permalink to this headline">¶</a></h1>
+<p>The rpicontrols package simplifies interactions with physical buttons connected to
+GPIO pins on a Raspberry Pi.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">rpicontrols</span> <span class="kn">import</span> <span class="n">Controller</span><span class="p">,</span> <span class="n">Button</span><span class="p">,</span> <span class="n">PullType</span><span class="p">,</span> <span class="n">make_controller</span>
+
+<span class="c1"># Initialize the button controller. A single instance can handle as many buttons as needed.</span>
+<span class="n">controller</span><span class="p">:</span> <span class="n">Controller</span> <span class="o">=</span> <span class="n">make_controller</span><span class="p">()</span>
+
+<span class="c1"># Create the button, connected to pin 22.</span>
+<span class="n">button</span><span class="p">:</span> <span class="n">Button</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">make_button</span><span class="p">(</span>
+    <span class="n">input_pin_id</span><span class="o">=</span><span class="mi">22</span><span class="p">,</span>  <span class="c1"># Id of the GPIO pin the button switch is connected to.</span>
+    <span class="nb">input</span><span class="o">=</span><span class="n">Button</span><span class="o">.</span><span class="n">InputType</span><span class="o">.</span><span class="n">PRESSED_WHEN_OFF</span><span class="p">,</span>  <span class="c1"># Depends on the physical wiring of the button.</span>
+    <span class="n">pull</span><span class="o">=</span><span class="n">PullType</span><span class="o">.</span><span class="n">UP</span>  <span class="c1"># Whether to enable pull-up or pull-down resistor. Use PullType.NONE to disable.</span>
+<span class="p">)</span>
+
+<span class="c1"># Define a callback to run when button is clicked.</span>
+<span class="k">def</span> <span class="nf">on_click_callback</span><span class="p">(</span><span class="n">button</span><span class="p">:</span> <span class="n">Button</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Button </span><span class="si">{</span><span class="n">button</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1"> clicked!&#39;</span><span class="p">)</span>
+
+<span class="c1"># Subscribe to the click event.</span>
+<span class="n">button</span><span class="o">.</span><span class="n">add_on_click</span><span class="p">(</span><span class="n">on_click_callback</span><span class="p">)</span>
+
+<span class="c1"># Start controller main loop. Use controller.start_in_thread() for the non-blocking version.</span>
+<span class="n">controller</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="section" id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Controller</span></code>(driver)</p></td>
+<td><p>Controller of all buttons.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#rpicontrols.Button" title="rpicontrols.Button"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Button</span></code></a>(input_pin_id, input_type, name)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#rpicontrols.make_controller" title="rpicontrols.make_controller"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_controller</span></code></a>([gpio_driver])</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="rpicontrols.make_controller">
+<code class="sig-prename descclassname">rpicontrols.</code><code class="sig-name descname">make_controller</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gpio_driver</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>rpicontrols.gpio_driver.GpioDriver<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; rpicontrols.controller.Controller<a class="headerlink" href="#rpicontrols.make_controller" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="controller-object">
+<h2>Controller Object<a class="headerlink" href="#controller-object" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt>
+<em class="property">class </em><code class="sig-prename descclassname">rpicontrols.</code><code class="sig-name descname">Controller</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">driver</span><span class="p">:</span> <span class="n">rpicontrols.gpio_driver.GpioDriver</span></em><span class="sig-paren">)</span></dt>
+<dd><p>Controller of all buttons.</p>
+<dl class="py class">
+<dt>
+<em class="property">class </em><code class="sig-name descname">Status</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span></dt>
+<dd><p>Defines the various steps in a controller lifecycle.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt>
+<code class="sig-name descname">make_button</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_pin_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">input</span><span class="p">:</span> <span class="n">rpicontrols.controller.Button.InputType</span></em>, <em class="sig-param"><span class="n">pull</span><span class="p">:</span> <span class="n">rpicontrols.gpio_driver.PullType</span></em>, <em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>str<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bounce_time</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">0</span></em><span class="sig-paren">)</span> &#x2192; rpicontrols.controller.Button</dt>
+<dd><p>Creates a new button connected to pins of the GPIO.</p>
+<p>Keyword arguments:
+input_pin_id – Id of the <em>input</em> pin the button is connected to.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt>
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None</dt>
+<dd><p>Runs the engine controlling the GPIO.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt>
+<em class="property">property </em><code class="sig-name descname">status</code></dt>
+<dd><p>Gets the current status of this controller.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="button-objects">
+<h2>Button Objects<a class="headerlink" href="#button-objects" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="rpicontrols.Button">
+<em class="property">class </em><code class="sig-prename descclassname">rpicontrols.</code><code class="sig-name descname">Button</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_pin_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">input_type</span><span class="p">:</span> <span class="n">rpicontrols.controller.Button.InputType</span></em>, <em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>str<span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rpicontrols.Button" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py class">
+<dt id="rpicontrols.Button.InputType">
+<em class="property">class </em><code class="sig-name descname">InputType</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rpicontrols.Button.InputType" title="Permalink to this definition">¶</a></dt>
+<dd><p>An enumeration.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">rpi-controls - RPi’s GPIO buttons</a><ul>
+<li><a class="reference internal" href="#summary">Summary</a></li>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+<li><a class="reference internal" href="#controller-object">Controller Object</a></li>
+<li><a class="reference internal" href="#button-objects">Button Objects</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="#">rpi-controls attr: rpicontrols.__version__ documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">rpi-controls - RPi’s GPIO buttons</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Cyrille Defranoux.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.4.3.
+    </div>
+  </body>
+</html>
