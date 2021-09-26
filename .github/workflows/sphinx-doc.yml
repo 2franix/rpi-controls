@@ -43,5 +43,5 @@ jobs:
       run: |
         git add docs
         git commit -m ${{format('"Update doc after change on {0}.\nChanges:\n{1}"', github.event.ref, github.event.commits[0].message)}}
-        git push
+        git push -f
 
