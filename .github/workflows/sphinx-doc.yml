@@ -25,10 +25,11 @@ jobs:
     - name: Get changes from PR ${{github.event.number}}
       if: ${{github.event_name == 'pull_request'}}
       run: |
-        git pull origin --no-edit ${{format('"Merge with {0}"', github.event.pull_request.head.ref)}} ${{github.event.pull_request.head.ref}}
+        git pull origin --no-edit ${{github.event.pull_request.head.ref}}
     - name: Get changes from ${{github.event.ref}}
       if: ${{github.event_name == 'push'}}
       run: |
+        git pull origin --no-edit ${{format('"Merge with {0}"', github.event.pull_request.head.ref)}} ${{github.event.pull_request.head.ref}}
         git merge -m format('Merge with {0}', ${{github.event.ref}}) ${{github.event.head}}
     - name: Generate doc with Sphinx
       run: |
