@@ -21,6 +21,7 @@ jobs:
         ref: 'main-doc'
         token: ${{secrets.MAIN_DOC_TOKEN}}
     - name: Configure repo
+      run: |
         git config pull.ff false
     - name: Install dependencies
       run: |
