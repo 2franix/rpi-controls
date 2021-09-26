@@ -21,8 +21,7 @@ jobs:
         ref: 'main-doc'
     - name: Install dependencies
       run: |
-        #sudo apt install python3-sphinx
-        # Ubuntu's package is soooo old
+        # Get sphinx from pypi rather than apt because Ubuntu packages a very old version that does not work well with our config.
         sudo pip3 install -U sphinx
     - name: Get changes from PR ${{github.event.number}}
       if: ${{github.event_name == 'pull_request'}}
@@ -31,8 +30,7 @@ jobs:
     - name: Get changes from ${{github.event.ref}}
       if: ${{github.event_name == 'push'}}
       run: |
-        git pull origin --no-edit ${{format('"Merge with {0}"', github.event.pull_request.head.ref)}} ${{github.event.pull_request.head.ref}}
-        git merge -m format('Merge with {0}', ${{github.event.ref}}) ${{github.event.head}}
+        git pull origin --no-edit ${{github.event.head}}
     - name: Generate doc with Sphinx
       run: |
         sphinx-build . docs
@@ -40,5 +38,5 @@ jobs:
       if: ${{github.event_name == 'push'}}
       run: |
         git add docs
-        git commit -m format('Update doc after change on {0}.\nChanges:\n{1}', ${{github.event.ref}}, ${{github.event.commits}})
+        git commit -m ${{format('"Update doc after change on {0}.\nChanges:\n{1}"', github.event.ref, github.event.commits[0][message])}}
 
