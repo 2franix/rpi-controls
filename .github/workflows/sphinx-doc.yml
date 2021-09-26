@@ -21,7 +21,12 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt install python3-sphinx
+    - name: Get changes from PR ${{github.event.number}}
+      if: ${{github.event_name == 'pull_request'}}
+      run: |
+        git merge -m ${{format('Merge with {0}', ${{github.event.pull_request.head}})}} ${{github.event.pull_request.head}}
     - name: Get changes from ${{github.event.ref}}
+      if: ${{github.event_name == 'push'}}
       run: |
         git merge -m format('Merge with {0}', ${{github.event.ref}}) ${{github.event.head}}
     - name: Generate doc with Sphinx
