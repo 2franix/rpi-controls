@@ -21,7 +21,7 @@ jobs:
         ref: 'main-doc'
     - name: Install dependencies
       run: |
-        sudo apt install python3-sphinx
+        #sudo apt install python3-sphinx
         # Ubuntu's package is soooo old
         sudo pip3 install -U sphinx
     - name: Get changes from PR ${{github.event.number}}
