@@ -24,7 +24,9 @@ jobs:
         # Get sphinx from pypi rather than apt because Ubuntu packages a very old version that does not work well with our config.
         sudo pip3 install -U sphinx
     - name: Declare user
-      run: git config user.name 2franix
+      run: | 
+        git config user.name 2franix
+        git config user.email cyrille.github@defx.fr
     - name: Get changes from PR ${{github.event.number}}
       if: ${{github.event_name == 'pull_request'}}
       run: |
@@ -41,4 +43,5 @@ jobs:
       run: |
         git add docs
         git commit -m ${{format('"Update doc after change on {0}.\nChanges:\n{1}"', github.event.ref, github.event.commits[0].message)}}
+        git push
 
