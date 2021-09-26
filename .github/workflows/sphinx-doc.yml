@@ -23,6 +23,8 @@ jobs:
       run: |
         # Get sphinx from pypi rather than apt because Ubuntu packages a very old version that does not work well with our config.
         sudo pip3 install -U sphinx
+    - name: Declare user
+      run: git config user.name 2franix
     - name: Get changes from PR ${{github.event.number}}
       if: ${{github.event_name == 'pull_request'}}
       run: |
