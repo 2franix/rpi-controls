@@ -29,6 +29,11 @@ jobs:
     - name: Generate doc with Sphinx
       run: |
         sphinx-build . docs
+    - name: Mark the docs as to not be built using Jekyll
+      # Github uses Jekyll by default to build Github Pages.
+      # Since we are pushing a ready-to-use website prepared
+      # by Sphinx, we don't want Jekyll to mess it all up.
+      run: touch docs/.nojekyll
     - name: Commit updated doc
       if: ${{github.event_name == 'push'}}
       run: |
@@ -36,5 +41,5 @@ jobs:
         git commit -m ${{format('"Update doc after change on {0}.
           Changes:
           {1}"', github.event.ref, github.event.commits[0].message)}}
-        git push -f origin HEAD:main-doc
+        git push -f origin HEAD:main_doc
 
