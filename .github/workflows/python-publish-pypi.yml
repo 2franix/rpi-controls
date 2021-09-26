@@ -9,6 +9,7 @@ on:
 
 jobs:
   deploy:
+    name: Build and deploy python package to PyPI
 
     runs-on: ubuntu-latest
 
