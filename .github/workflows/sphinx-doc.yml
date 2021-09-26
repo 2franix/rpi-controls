@@ -11,6 +11,7 @@ on:
 
 jobs:
   build:
+    name: "Build doc using Sphinx"
 
     runs-on: ubuntu-latest
 
