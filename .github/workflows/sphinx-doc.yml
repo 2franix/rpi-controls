@@ -24,7 +24,7 @@ jobs:
     - name: Get changes from PR ${{github.event.number}}
       if: ${{github.event_name == 'pull_request'}}
       run: |
-        git merge -m ${{format('Merge with {0}', github.event.pull_request.head)}} ${{github.event.pull_request.head}}
+        git merge -m ${{format('"Merge with {0}"', github.event.pull_request.head.ref)}} ${{github.event.pull_request.head.ref}}
     - name: Get changes from ${{github.event.ref}}
       if: ${{github.event_name == 'push'}}
       run: |
