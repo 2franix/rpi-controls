@@ -12,17 +12,12 @@ on:
 jobs:
   build:
     name: "Build doc using Sphinx"
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: 'main-doc'
         token: ${{secrets.MAIN_DOC_TOKEN}}
-    - name: Configure repo
-      run: |
-        git config pull.ff false
     - name: Install dependencies
       run: |
         # Get sphinx from pypi rather than apt because Ubuntu packages a very old version that does not work well with our config.
@@ -31,14 +26,6 @@ jobs:
       run: | 
         git config user.name 2franix
         git config user.email cyrille.github@defx.fr
-    - name: Get changes from PR ${{github.event.number}}
-      if: ${{github.event_name == 'pull_request'}}
-      run: |
-        git pull origin --no-edit ${{github.event.pull_request.head.ref}}
-    - name: Get changes from ${{github.event.ref}}
-      if: ${{github.event_name == 'push'}}
-      run: |
-        git pull origin --no-edit ${{github.event.head}}
     - name: Generate doc with Sphinx
       run: |
         sphinx-build . docs
@@ -49,5 +36,5 @@ jobs:
         git commit -m ${{format('"Update doc after change on {0}.
           Changes:
           {1}"', github.event.ref, github.event.commits[0].message)}}
-        git push -f
+        git push -f origin HEAD:main-doc
 
