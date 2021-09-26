@@ -20,6 +20,8 @@ jobs:
       with:
         ref: 'main-doc'
         token: ${{secrets.MAIN_DOC_TOKEN}}
+    - name: Configure repo
+        git config pull.ff false
     - name: Install dependencies
       run: |
         # Get sphinx from pypi rather than apt because Ubuntu packages a very old version that does not work well with our config.
