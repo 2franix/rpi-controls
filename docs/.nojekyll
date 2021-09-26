@@ -1,2 +1,0 @@
-Disable Jekyll build of the doc files in this folder.
-They are built via a separate build process involving Sphinx.

@@ -1,0 +1,35 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python package
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: 'main-doc'
+    - name: Install dependencies
+      run: |
+        sudo apt install python3-sphinx
+    - name: Get changes from ${{github.event.ref}}
+      run: |
+        git merge -m format('Merge with {0}', ${{github.event.ref}}) ${{github.event.head}}
+    - name: Generate doc with Sphinx
+      run: |
+        sphinx-build . docs
+    - name: Commit updated doc
+      if: ${{github.event_name == 'push'}}
+      run: |
+        git add docs
+        git commit -m format('Update doc after change on {0}.\nChanges:\n{1}', ${{github.event.ref}}, ${{github.event.commits}})
+
