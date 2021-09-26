@@ -18,7 +18,7 @@ from configparser import ConfigParser
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-root_doc = 'index.rst'
+root_doc = 'index'
 
 # -- Project information -----------------------------------------------------
 
