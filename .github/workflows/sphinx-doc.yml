@@ -43,6 +43,8 @@ jobs:
       if: ${{github.event_name == 'push'}}
       run: |
         git add docs
-        git commit -m ${{format('"Update doc after change on {0}.\nChanges:\n{1}"', github.event.ref, github.event.commits[0].message)}}
+        git commit -m ${{format('"Update doc after change on {0}.
+          Changes:
+          {1}"', github.event.ref, github.event.commits[0].message)}}
         git push -f
 
