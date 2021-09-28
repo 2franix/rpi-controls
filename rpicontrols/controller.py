@@ -122,6 +122,8 @@ class Controller:
         self._buttons.remove(button)
 
     def stop(self, wait: bool = False, kills_running_events: bool = False) -> None:
+        """Stops this controller.
+        """
         get_logger().info('Stopping controller...')
         with self._status_lock:
             # Already stopped?
