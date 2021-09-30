@@ -34,7 +34,7 @@ GPIO pins on a Raspberry Pi.
     controller.run()
 
 
-.. currentmodue:: rpicontrols
+.. currentmodule:: rpicontrols
 
 Summary
 ~~~~~~~
