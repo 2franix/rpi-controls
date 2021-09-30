@@ -16,7 +16,7 @@ from configparser import ConfigParser
 #
 # import os
 # import sys
-# sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('..'))
 
 root_doc = 'index'
 
@@ -24,7 +24,7 @@ root_doc = 'index'
 
 # Load the setup.cfg file to avoid repeating ourselves.
 setup_cfg = ConfigParser()
-setup_cfg.read('setup.cfg')
+setup_cfg.read(os.path.join('..', 'setup.cfg'))
 
 project = setup_cfg['metadata']['name']
 author = setup_cfg['metadata']['author']
@@ -66,4 +66,4 @@ html_theme = 'classic'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']

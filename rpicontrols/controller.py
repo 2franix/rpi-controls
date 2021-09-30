@@ -109,12 +109,21 @@ class Controller:
         return button
 
     def delete_button(self, button: Button) -> None:
+        """Removes the button from the controller. The controller will
+        stop monitoring this button events and will not update its
+        status anymore. Call this method to save resources if this
+        button is not useful anymore.
+        It is not required to delete all buttons before deleting
+        this controller.
+        """
         if button not in self._buttons:
             raise ValueError(f'Button {button.name} is not registered in this controller.')
         self.driver.unconfigure_button(button.pin_id)
         self._buttons.remove(button)
 
     def stop(self, wait: bool = False, kills_running_events: bool = False) -> None:
+        """Stops this controller.
+        """
         get_logger().info('Stopping controller...')
         with self._status_lock:
             # Already stopped?
