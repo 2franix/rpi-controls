@@ -24,7 +24,7 @@ root_doc = 'index'
 
 # Load the setup.cfg file to avoid repeating ourselves.
 setup_cfg = ConfigParser()
-setup_cfg.read('setup.cfg')
+setup_cfg.read(os.path.join('..', 'setup.cfg'))
 
 project = setup_cfg['metadata']['name']
 author = setup_cfg['metadata']['author']
