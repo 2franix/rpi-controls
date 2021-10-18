@@ -11,7 +11,7 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
     def __init__(self):
         gpio_driver.GpioDriver.__init__(self)
         GPIO.setmode(GPIO.BOARD)
-        self._edge_callback: Callable[[int, gpio_driver.EdgeType], None] = None
+        self._edge_callback: Optional[Callable[[int, gpio_driver.EdgeType], None]] = None
         self._bounce_times: dict[int, int] = {}  # Bounce time in ms indexed by pin id.
 
     def input(self, pin_id: int) -> bool:

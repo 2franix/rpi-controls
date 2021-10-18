@@ -16,17 +16,16 @@ from . import gpio_driver
 
 def get_logger(): return logging.getLogger(__name__)
 
-
 class Controller:
     """Controller of all buttons.
     """
     class Status(enum.Enum):
         """Defines the various steps in a controller lifecycle.
         """
-        READY: str = "ready"
-        RUNNING: str = "running"
-        STOPPING: str = "stopping"
-        STOPPED: str = "stopped"
+        READY = "ready"
+        RUNNING = "running"
+        STOPPING = "stopping"
+        STOPPED = "stopped"
 
     def __init__(self, driver: gpio_driver.GpioDriver):
         """Initializes a new instance of the engine controlling the GPIO.
@@ -121,7 +120,7 @@ class Controller:
         self.driver.unconfigure_button(button.pin_id)
         self._buttons.remove(button)
 
-    def stop(self, wait: bool = False, kills_running_events: bool = False) -> None:
+    def stop(self, wait: bool = False) -> None:
         """Stops this controller.
         """
         get_logger().info('Stopping controller...')
@@ -217,7 +216,8 @@ class Controller:
         for sig in signals:
             signal.signal(sig, self._signal_handler)
 
-    def _signal_handler(self, signal, frame):
+    def _signal_handler(self, signal, frame) -> None:
+        get_logger().debug(f'Signal caught: {signal} on frame={frame}.')
         self.stop(wait=False)
 
 

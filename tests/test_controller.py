@@ -14,13 +14,14 @@ from rpicontrols import gpio_driver  # To access internal types.
 class GpioDriverMock(GpioDriver):
     def __init__(self):
         self._pin_states: Dict[int, bool] = {}
-        self._edge_callback: Callable[[int, gpio_driver.EdgeType], None] = None
+        self._edge_callback: Optional[Callable[[int, gpio_driver.EdgeType], None]] = None
 
     @property
     def configured_pins(self) -> Iterable[int]:
         return self._pin_states.keys()
 
     def configure_button(self, pin_id: int, pull: PullType, bounce_time: int) -> None:
+        assert pull and bounce_time >= 0  # Mainly to get rid of the "unused parameter" warning.
         self._pin_states[pin_id] = False
 
     def unconfigure_button(self, pin_id: int) -> None:
@@ -244,7 +245,7 @@ class TestController:
 
         # Perform a double click.
         assert not button.pressed  # Make sure we start off with the expected state.
-        for i in range(4):
+        for _ in range(4):
             pressed(not controller_in_thread.driver.input(2))
             time.sleep(iteration_sleep)
         listener.assert_calls(press=3, long_press=1, release=3, click=1, double_click=1)
@@ -295,7 +296,7 @@ class TestController:
         # to the event handler is awaited differently. What may work
         # when the controller is running may fail here, then.
         async def raise_exception_with_delay():
-            if not controller_in_thread.is_stopping:
+            if controller_in_thread.status != Controller.Status.STOPPING:
                 await asyncio.sleep(0.01)
             # Wait a little more to make sure the controller has reached the
             # point where it waits for the event handlers to complete.
