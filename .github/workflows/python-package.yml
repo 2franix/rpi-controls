@@ -18,7 +18,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
-        sudo apt install tox
+        sudo apt install tox npm
+        npm i -g pyright
     - name: Test with tox
       run: |
         tox
