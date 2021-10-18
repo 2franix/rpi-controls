@@ -1,6 +1,23 @@
 [build-system]
 requires = [
 	"setuptools>=42",
-	 "wheel"
+	"wheel",
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.flake8]
+show-source = "True"
+max-complexity = 13
+max-line-length = 150
+statistics = "True"
+
+[tool.black]
+line-length = 150
+
+[tool.pyright]
+exclude = [
+	"dist/**",
+	"build/**",
+	"docs/**",
+	".tox/**",
+]
