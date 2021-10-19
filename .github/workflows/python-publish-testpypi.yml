@@ -9,6 +9,10 @@ on:
         - main
 
 jobs:
+  build:
+    name: Build and test package
+    uses: 2franix/rpi-controls/.github/workflows/python-package.yml
+
   deploy:
     name: Build and deploy python package to Test PyPI
 

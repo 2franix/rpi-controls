@@ -15,12 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with rpi-controls.  If not, see <https://www.gnu.org/licenses/>.
 
-import typing
 from .controller import Controller, Button
 from .gpio_driver import GpioDriver, PullType
 
 # Define public modules and functions.
-__all__: typing.Sequence[str] = [m.__name__ for m in (Controller, Button, GpioDriver, PullType)] + ['make_controller']
+__all__ = ["Controller", "Button", "GpioDriver", "PullType", "make_controller"]
 __version__ = '1.0.0.1'
 
 
