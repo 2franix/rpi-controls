@@ -9,10 +9,6 @@ on:
         - main
 
 jobs:
-  build:
-    name: Build and test package
-    uses: 2franix/rpi-controls/.github/workflows/python-package.yml
-
   deploy:
     name: Build and deploy python package to Test PyPI
 
@@ -26,15 +22,16 @@ jobs:
         python-version: '3.x'
     - name: Install dependencies
       run: |
-        sudo apt install tox
         python -m pip install --upgrade pip
         python -m pip install build
         pip install setuptools wheel twine
+        sudo apt install tox npm
+    - name: Check with tox
+      run: |
+        tox
     - name: Build and publish
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        tox
-        python -m build
         twine upload --skip-existing --repository testpypi dist/*
