@@ -26,6 +26,7 @@ jobs:
         python -m pip install build
         pip install setuptools wheel twine
         sudo apt install tox npm
+        npm i -g pyright
     - name: Check with tox
       run: |
         tox
@@ -34,4 +35,5 @@ jobs:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
+        python -m build
         twine upload --skip-existing --repository testpypi dist/*
