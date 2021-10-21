@@ -21,3 +21,4 @@ exclude = [
 	"docs/**",
 	".tox/**",
 ]
+pythonVersion = "3.7"
