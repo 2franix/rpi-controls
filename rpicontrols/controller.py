@@ -208,7 +208,7 @@ class Controller:
             self._status = Controller.Status.STOPPED
             get_logger().info("Controller is now stopped")
 
-    def stop_on_signals(self, signals: typing.Iterable[signal.Signals]=[signal.SIGINT, signal.SIGTERM]):
+    def stop_on_signals(self, signals: typing.Iterable[signal.Signals] = [signal.SIGINT, signal.SIGTERM]):
         for sig in signals:
             signal.signal(sig, self._signal_handler)
 
