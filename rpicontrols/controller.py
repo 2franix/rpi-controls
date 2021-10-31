@@ -25,6 +25,7 @@ class Controller:
         """Defines the various steps in a controller lifecycle."""
 
         READY = "ready"
+        """Controller is waiting for being started, either with :py:meth:`.Controller.run` or :py:meth:`Controller.run`"""
         RUNNING = "running"
         STOPPING = "stopping"
         STOPPED = "stopped"
@@ -86,7 +87,7 @@ class Controller:
                     get_logger().debug("Thread for scheduled updates wakes up.")
 
     def make_button(
-        self, input_pin_id: int, input: Button.InputType, pull: gpio_driver.PullType, name: typing.Optional[str] = None, bounce_time: int = 0
+        self, input_pin_id: int, input: Button.InputType, pull: gpio_driver.PullType, name: str = None, bounce_time: int = 0
     ) -> Button:
         """Creates a new button connected to pins of the GPIO.
 
@@ -174,7 +175,7 @@ class Controller:
                     self._scheduled_updates_condition.notify()
         get_logger().debug(f"edge end: {edge} on pin {pin_id}")
 
-    def _update_button(self, button: Button, pin_input: typing.Optional[bool] = None, raise_events: bool = True) -> None:
+    def _update_button(self, button: Button, pin_input: bool = None, raise_events: bool = True) -> None:
         if self._status != Controller.Status.RUNNING:
             return
         actual_pin_input: bool = pin_input if pin_input is not None else self.driver.input(button.pin_id)
@@ -182,13 +183,14 @@ class Controller:
         self._running_event_handlers += event_futures
 
     def start_in_thread(self) -> None:
+        """Runs the engine controlling the GPIO in its own thread."""
         thread = threading.Thread(target=self.run)
         thread.start()
         while self._status == Controller.Status.READY:
             time.sleep(0.01)
 
     def run(self) -> None:
-        """Runs the engine controlling the GPIO."""
+        """Runs the engine controlling the GPIO. See also :py:meth:`start_in_thread`"""
         get_logger().info("Starting the controller...")
         with self._status_lock:
             # Already running or stopping.
@@ -227,7 +229,7 @@ class Button:
     EventHandler = typing.Union[SyncEventHandler, AsyncEventHandler]
     EventHandlerList = typing.List[EventHandler]
 
-    def __init__(self, input_pin_id: int, input_type: Button.InputType, name: typing.Optional[str]):
+    def __init__(self, input_pin_id: int, input_type: Button.InputType, name: str = None):
         self._pin_id: int = input_pin_id
         self._name: str = name or f"button for pin {input_pin_id}"
         self._input_type: Button.InputType = input_type
