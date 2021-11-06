@@ -25,7 +25,7 @@ class Controller:
         """Defines the various steps in a controller lifecycle."""
 
         READY = "ready"
-        """Controller is waiting for being started, either with :py:meth:`.Controller.run` or :py:meth:`Controller.run`"""
+        """Controller is waiting for being started, either with :meth:`Controller.run` or :meth:`Controller.start_in_thread`"""
         RUNNING = "running"
         STOPPING = "stopping"
         STOPPED = "stopped"
