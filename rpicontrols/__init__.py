@@ -15,8 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with rpi-controls.  If not, see <https://www.gnu.org/licenses/>.
 
-from .controller import Controller, Button
-from .gpio_driver import GpioDriver, PullType
+from .controller import Controller as Controller
+from .controller import Button as Button
+from .gpio_driver import GpioDriver as GpioDriver
+from .gpio_driver import PullType as PullType
 
 # Define public modules and functions.
 __all__ = ["Controller", "Button", "GpioDriver", "PullType", "make_controller"]

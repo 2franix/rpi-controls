@@ -38,7 +38,6 @@ Py Module
 
 .. module:: rpicontrols
 
-
 Summary
 ~~~~~~~
 
@@ -56,8 +55,6 @@ Functions
 
 Controller Object
 ~~~~~~~~~~~~~~~~~
-
-.. currentmodule:: rpicontrols.controller
 
 .. autoclass:: Controller
     :members:
