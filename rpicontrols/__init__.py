@@ -31,7 +31,7 @@ def make_controller(gpio_driver: GpioDriver = None) -> Controller:
     the client code.
 
     :param gpio_driver: object abstracting access to the GPIO, defaults to None in which case
-        an implementation based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>` xill be
+        an implementation based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>`_ will be
         used.
         This parameter is unlikely to require a different value in a production context.
         It is mostly here to help mocking the GPIO access when testing.
