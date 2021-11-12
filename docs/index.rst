@@ -42,10 +42,10 @@ Summary
 ~~~~~~~
 
 .. autosummary::
+    make_controller
     Controller
     Controller.Status
     Button
-    make_controller
 
 Functions
 ~~~~~~~~~

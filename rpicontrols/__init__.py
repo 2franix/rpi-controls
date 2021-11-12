@@ -22,11 +22,23 @@ from .gpio_driver import PullType as PullType
 
 # Define public modules and functions.
 __all__ = ["Controller", "Button", "GpioDriver", "PullType", "make_controller"]
-__version__ = '1.0.0.1'
+__version__ = "1.0.0.1"
 
 
 def make_controller(gpio_driver: GpioDriver = None) -> Controller:
+    """Creates a new instance of a button controller. One instance of a controller is required
+    to work with any number of buttons, so a call to this function is mandatory when initializing
+    the client code.
+
+    :param gpio_driver: object abstracting access to the GPIO, defaults to None in which case
+        an implementation based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>` xill be
+        used.
+        This parameter is unlikely to require a different value in a production context.
+        It is mostly here to help mocking the GPIO access when testing.
+    :rtype: A new controller, accepting button declaration and ready to be started.
+    """
     if not gpio_driver:
         from . import rpi_gpio_driver
+
         gpio_driver = rpi_gpio_driver.RpiGpioDriver()
     return Controller(gpio_driver)
