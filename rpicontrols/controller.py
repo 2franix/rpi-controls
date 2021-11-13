@@ -19,7 +19,9 @@ def get_logger():
 
 
 class Controller:
-    """Controller of all buttons."""
+    """Represents the object managing all buttons.
+    It monitors the state of the GPIO and calls event callbacks on buttons when appropriate.
+    """
 
     class Status(enum.Enum):
         """Defines the various steps in a controller lifecycle."""
@@ -27,14 +29,17 @@ class Controller:
         READY = "ready"
         """Controller is waiting for being started, either with :meth:`Controller.run` or :meth:`Controller.start_in_thread`"""
         RUNNING = "running"
+        """Controller has been started and is monitoring GPIO. This is the active state of the controller, during which button
+        events can be raised."""
         STOPPING = "stopping"
+        """Controller is being shut down. No new events will be raised at this point because GPIO is no longer monitored, but ongoing callbacks may still need to finish."""
         STOPPED = "stopped"
+        """Controller is at full stop and all event callbacks have returned. Controller cannot be started again."""
 
     def __init__(self, driver: gpio_driver.GpioDriver):
         """Initializes a new instance of the engine controlling the GPIO.
 
-        Keyword arguments:
-        driver -- object abstracting access to the GPIO.
+        :param driver: object abstracting access to the GPIO.
         """
         self.driver: gpio_driver.GpioDriver = driver
         self._buttons: typing.List[Button] = []
@@ -62,6 +67,7 @@ class Controller:
 
     @property
     def buttons(self) -> typing.Iterable[Button]:
+        """Gets the collection of buttons that have been registered using :meth:`make_button`."""
         return self._buttons
 
     def _scheduled_updates_thread_main(self) -> None:
@@ -91,8 +97,16 @@ class Controller:
     ) -> Button:
         """Creates a new button connected to pins of the GPIO.
 
-        Keyword arguments:
-        input_pin_id -- Id of the *input* pin the button is connected to.
+        :param input_pin_id: id of the *input* pin the button is connected to. Its meaning depends on the selected GPIO driver.
+            The default driver is :class:`rpicontrols.rpi_gpio_driver.RpiGpioDriver` which uses :data:`RPi.GPIO.BOARD` unless otherwise specified.
+        :param pull: whether built-in pull-up or pull-down should be used for this button. Those are resistors integrated in the
+            Raspberry Pi's circuits that can be used to make sure GPIO pins are always at a predictable potential. The appropriate
+            value is dependent on how the physical button or switch has been wired to the GPIO.
+            See `Wikipedia <https://en.wikipedia.org/wiki/Pull-up_resistor>`_ for more information.
+        :param name: optional name, used for documentation and logging purposes. If unset, a default unique name will be assigned.
+        :param bounce_time: timespan after a GPIO rising or falling edge during which new edges should be ignored. This is meant
+            to avoid unwanted edge detections due to the transient instability of switches when they change state. The appropriate
+            value depends on the actual physical switch or button in use.
         """
         button = Button(input_pin_id, input, name)
 
@@ -190,7 +204,7 @@ class Controller:
             time.sleep(0.01)
 
     def run(self) -> None:
-        """Runs the engine controlling the GPIO. See also :py:meth:`start_in_thread`"""
+        """Runs the engine controlling the GPIO. See also :meth:`start_in_thread`"""
         get_logger().info("Starting the controller...")
         with self._status_lock:
             # Already running or stopping.

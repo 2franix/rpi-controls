@@ -32,7 +32,7 @@ def make_controller(gpio_driver: GpioDriver = None) -> Controller:
 
     :param gpio_driver: object abstracting access to the GPIO, defaults to None in which case
         an implementation based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>`_ will be
-        used.
+        used (see :class:`rpicontrols.rpi_gpio_driver.RpiGpioDriver`).
         This parameter is unlikely to require a different value in a production context.
         It is mostly here to help mocking the GPIO access when testing.
     :rtype: A new controller, accepting button declaration and ready to be started.

@@ -8,9 +8,9 @@ import time
 
 
 class RpiGpioDriver(gpio_driver.GpioDriver):
-    def __init__(self):
+    def __init__(self, mode: int = GPIO.BOARD):
         gpio_driver.GpioDriver.__init__(self)
-        GPIO.setmode(GPIO.BOARD)
+        GPIO.setmode(mode)
         self._edge_callback: Optional[Callable[[int, gpio_driver.EdgeType], None]] = None
         self._bounce_times: dict[int, int] = {}  # Bounce time in ms indexed by pin id.
 
