@@ -33,9 +33,6 @@ GPIO pins on a Raspberry Pi.
     # Start controller main loop. Use controller.start_in_thread() for the non-blocking version.
     controller.run()
 
-Py Module
-~~~~~~~~~
-
 .. module:: rpicontrols
 
 Summary

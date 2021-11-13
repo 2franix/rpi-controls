@@ -8,6 +8,9 @@ import time
 
 
 class RpiGpioDriver(gpio_driver.GpioDriver):
+    """Implementation of the GPIO driver interface based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>`_.#!/usr/bin/env bash
+    This is the default driver for button controllers.
+    """
     def __init__(self, mode: int = GPIO.BOARD):
         gpio_driver.GpioDriver.__init__(self)
         GPIO.setmode(mode)
