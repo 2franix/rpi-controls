@@ -44,6 +44,7 @@ Summary
     Controller.Status
     Button
 
+
 Functions
 ~~~~~~~~~
 
@@ -60,4 +61,12 @@ Button Objects
 ~~~~~~~~~~~~~~
 
 .. autoclass:: Button
+    :members:
+
+Gpio Drivers
+~~~~~~~~~~~~
+
+.. module:: rpicontrols.rpi_gpio_driver
+
+.. autoclass:: RpiGpioDriver
     :members:
