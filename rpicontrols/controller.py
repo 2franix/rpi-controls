@@ -101,6 +101,8 @@ class Controller:
 
         :param input_pin_id: id of the *input* pin the button is connected to. Its meaning depends on the selected GPIO driver.
             The default driver is :class:`rpicontrols.rpi_gpio_driver.RpiGpioDriver` which uses :data:`RPi.GPIO.BOARD` unless otherwise specified.
+        :param input: value describing the button physical behavior with respect to the electrical wiring. It helps the controller
+            tell when the button is considered pressed or released, depending on the state of the GPIO.
         :param pull: whether built-in pull-up or pull-down should be used for this button. Those are resistors integrated in the
             Raspberry Pi's circuits that can be used to make sure GPIO pins are always at a predictable potential. The appropriate
             value is dependent on how the physical button or switch has been wired to the GPIO.
@@ -237,8 +239,13 @@ class Controller:
 
 class Button:
     class InputType(enum.Enum):
+        """Defines the various physical behaviors of a button with respect to the wiring of its corresponding GPIO pins."""
+
         PRESSED_WHEN_ON = 1
+        """The button is detected as pressed when its GPIO input pin is on."""
+
         PRESSED_WHEN_OFF = 2
+        """The button is detected as pressed when its GPIO input pin is off."""
 
     SyncEventHandler = typing.Callable[["Button"], None]
     AsyncEventHandler = typing.Callable[["Button"], typing.Coroutine[typing.Any, typing.Any, typing.Any]]
