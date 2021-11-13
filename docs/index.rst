@@ -63,10 +63,14 @@ Button Objects
 .. autoclass:: Button
     :members:
 
-Gpio Drivers
+GPIO Drivers
 ~~~~~~~~~~~~
 
 .. module:: rpicontrols.rpi_gpio_driver
 
-.. autoclass:: RpiGpioDriver
-    :members:
+.. class:: RpiGpioDriver(mode: int = RPi.GPIO.BOARD)
+
+    Implementation of the GPIO driver interface based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>`_.
+    This is the default driver for button controllers.
+
+    :param mode: Value describing the meaning of GPIO pin numbers. Refer to RPi.GPIO documentation for more information.
