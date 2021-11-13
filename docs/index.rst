@@ -73,4 +73,4 @@ GPIO Drivers
     Implementation of the GPIO driver interface based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>`_.
     This is the default driver for button controllers.
 
-    :param mode: Value describing the meaning of GPIO pin numbers. Refer to RPi.GPIO documentation for more information.
+    :param mode: value describing the meaning of GPIO pin numbers. Refer to RPi.GPIO documentation for more information.

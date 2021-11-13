@@ -28,11 +28,15 @@ class Controller:
 
         READY = "ready"
         """Controller is waiting for being started, either with :meth:`Controller.run` or :meth:`Controller.start_in_thread`"""
+
         RUNNING = "running"
         """Controller has been started and is monitoring GPIO. This is the active state of the controller, during which button
         events can be raised."""
+
         STOPPING = "stopping"
-        """Controller is being shut down. No new events will be raised at this point because GPIO is no longer monitored, but ongoing callbacks may still need to finish."""
+        """Controller is being shut down. No new events will be raised at this point because GPIO is no longer monitored,
+        but ongoing callbacks may still need to finish."""
+
         STOPPED = "stopped"
         """Controller is at full stop and all event callbacks have returned. Controller cannot be started again."""
 
@@ -92,9 +96,7 @@ class Controller:
                     self._scheduled_updates_condition.wait()
                     get_logger().debug("Thread for scheduled updates wakes up.")
 
-    def make_button(
-        self, input_pin_id: int, input: Button.InputType, pull: gpio_driver.PullType, name: str = None, bounce_time: int = 0
-    ) -> Button:
+    def make_button(self, input_pin_id: int, input: Button.InputType, pull: gpio_driver.PullType, name: str = None, bounce_time: int = 0) -> Button:
         """Creates a new button connected to pins of the GPIO.
 
         :param input_pin_id: id of the *input* pin the button is connected to. Its meaning depends on the selected GPIO driver.
