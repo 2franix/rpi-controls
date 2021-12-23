@@ -8,7 +8,7 @@ import time
 
 
 class RpiGpioDriver(gpio_driver.GpioDriver):
-    """Implementation of the GPIO driver interface based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>`_.#!/usr/bin/env bash
+    """Implementation of the GPIO driver interface based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>`.
     This is the default driver for button controllers.
     """
     def __init__(self, mode: int = GPIO.BOARD):
@@ -55,8 +55,8 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
 
     def _on_edge(self, pin_id: int) -> None:
         # In case edge is called while button is being unconfigured, abort.
-        bounce_time: Optional[int] = self._bounce_times.get(pin_id)
-        if not bounce_time:
+        bounce_time: Optional[int] = self._bounce_times.get(pin_id, None)
+        if bounce_time == None:
             return
 
         time.sleep(bounce_time/1000.0)
