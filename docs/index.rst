@@ -33,31 +33,44 @@ GPIO pins on a Raspberry Pi.
     # Start controller main loop. Use controller.start_in_thread() for the non-blocking version.
     controller.run()
 
-
-.. currentmodule:: rpicontrols
+.. module:: rpicontrols
 
 Summary
 ~~~~~~~
 
 .. autosummary::
-    Controller
-    Button
     make_controller
+    Controller
+    Controller.Status
+    Button
+
 
 Functions
 ~~~~~~~~~
 
-.. autofunction:: make_controller
+.. autofunction::
+     make_controller
 
 Controller Object
 ~~~~~~~~~~~~~~~~~
 
 .. autoclass:: Controller
-        :members:
-        :noindex: __init__
+    :members:
 
 Button Objects
 ~~~~~~~~~~~~~~
 
 .. autoclass:: Button
     :members:
+
+GPIO Drivers
+~~~~~~~~~~~~
+
+.. module:: rpicontrols.rpi_gpio_driver
+
+.. class:: RpiGpioDriver(mode: int = RPi.GPIO.BOARD)
+
+    Implementation of the GPIO driver interface based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>`_.
+    This is the default driver for button controllers.
+
+    :param mode: value describing the meaning of GPIO pin numbers. Refer to RPi.GPIO documentation for more information.
