@@ -237,7 +237,7 @@ class Controller:
             get_logger().info("Controller is now stopped")
 
     def stop_on_signals(self, signals: typing.Iterable[signal.Signals] = [signal.SIGINT, signal.SIGTERM]):
-        """Register a handler to stop this controller when specific signals are caught.
+        """Registers a handler to stop this controller when specific signals are caught.
 
         :param signals: list of signals that should stop this controller.
         """
@@ -250,7 +250,7 @@ class Controller:
 
 
 class Button:
-    """Represents the button connected to the GPIO.
+    """Represents a button connected to the GPIO.
 
     This object holds the current state of the button and the event handlers to be called when
     events are raised.
