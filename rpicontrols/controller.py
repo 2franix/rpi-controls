@@ -138,7 +138,11 @@ class Controller:
         self._buttons.remove(button)
 
     def stop(self, wait: bool = False) -> None:
-        """Stops this controller."""
+        """Stops this controller.
+
+        Attempting to stop a controller that is already stopped does nothing. Otherwise, calling this method on a controller
+        that is in a status different from :data:`Controller.Status.RUNNING` raises an exception.
+        """
         get_logger().info("Stopping controller...")
         with self._status_lock:
             # Already stopped?
@@ -208,7 +212,11 @@ class Controller:
             time.sleep(0.01)
 
     def run(self) -> None:
-        """Runs the engine controlling the GPIO. See also :meth:`start_in_thread`"""
+        """Runs the engine controlling the GPIO.
+
+        This method blocks until the controller is stopped. See also :meth:`start_in_thread` for
+        a non-blocking version of this start method.
+        """
         get_logger().info("Starting the controller...")
         with self._status_lock:
             # Already running or stopping.
@@ -229,6 +237,10 @@ class Controller:
             get_logger().info("Controller is now stopped")
 
     def stop_on_signals(self, signals: typing.Iterable[signal.Signals] = [signal.SIGINT, signal.SIGTERM]):
+        """Register a handler to stop this controller when specific signals are caught.
+
+        :param signals: list of signals that should stop this controller.
+        """
         for sig in signals:
             signal.signal(sig, self._signal_handler)
 
