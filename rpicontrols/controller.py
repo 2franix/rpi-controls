@@ -250,6 +250,12 @@ class Controller:
 
 
 class Button:
+    """Represents the button connected to the GPIO.
+
+    This object holds the current state of the button and the event handlers to be called when
+    events are raised.
+    """
+
     class InputType(enum.Enum):
         """Defines the various physical behaviors of a button with respect to the wiring of its corresponding GPIO pins."""
 
@@ -260,9 +266,13 @@ class Button:
         """The button is detected as pressed when its GPIO input pin is off."""
 
     SyncEventHandler = typing.Callable[["Button"], None]
+    """Represents the type for synchronous event handlers."""
     AsyncEventHandler = typing.Callable[["Button"], typing.Coroutine[typing.Any, typing.Any, typing.Any]]
+    """Represents the type for asynchronous event handlers."""
     EventHandler = typing.Union[SyncEventHandler, AsyncEventHandler]
+    """Represents the type for all kinds of event handlers (synchronous or asynchronous)."""
     EventHandlerList = typing.List[EventHandler]
+    """Represents the type for lists of event handlers (synchronous or asynchronous)."""
 
     def __init__(self, input_pin_id: int, input_type: Button.InputType, name: str = None):
         self._pin_id: int = input_pin_id
