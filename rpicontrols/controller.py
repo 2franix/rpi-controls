@@ -142,6 +142,9 @@ class Controller:
 
         Attempting to stop a controller that is already stopped does nothing. Otherwise, calling this method on a controller
         that is in a status different from :data:`Controller.Status.RUNNING` raises an exception.
+
+        :param wait: whether to block until the controller has actually stopped. If False, the method returns quicker but
+            there is no guarantee that the controller has actually reached the :data:`Status.STOPPED` status.
         """
         get_logger().info("Stopping controller...")
         with self._status_lock:
