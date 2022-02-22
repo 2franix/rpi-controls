@@ -285,11 +285,15 @@ class Button:
         self._long_press_handlers: Button.EventHandlerList = []
         self._click_handlers: Button.EventHandlerList = []
         self._double_click_handlers: Button.EventHandlerList = []
-        #: Maximum number of elapsed seconds between a press and the second release to qualify
-        #: for a double click.
+        #: Period of time in seconds that defines the double click speed. For a double click to be detected,
+        # two clicks must occur so that the number of elapsed seconds between the first press and the second release
+        # is at most equal to this timeout.
+        # This timeout has an indirect impact on the detection of the click events: since no click event is raised
+        # when a double click occurs, the controller must wait for this double click timeout to expire once
+        # a first click has been detected before the actual click event can be raised.
         self.double_click_timeout: float = 0.5
-        #: Number of consecutive seconds the button must be pressed for the 'long pressed' event
-        #: to be raised.
+        #: Number of consecutive seconds the button must be pressed for the *long pressed* event
+        # to be raised.
         self.long_press_timeout: float = 0.5
         # Timestamps of previous presses and releases.
         self._press_times: typing.List[float] = []
@@ -421,31 +425,47 @@ class Button:
             get_logger().exception(e)
 
     def add_on_press(self, func: EventHandler) -> None:
+        """Adds a handler of the *press* event. This handler will be called whenever the button is pressed."""
         self._press_handlers.append(func)
 
     def remove_on_press(self, func: EventHandler) -> None:
+        """Removes a handler of the *press* event."""
         self._press_handlers.remove(func)
 
     def add_on_long_press(self, func: EventHandler) -> None:
+        """Adds a handler of the *long press* event. This handler will be called whenever the button has
+        been kept in its pressed state for a period of time equal to :data:`long_press_timeout` seconds."""
         self._long_press_handlers.append(func)
 
     def remove_on_long_press(self, func: EventHandler) -> None:
+        """Removes a handler of the *long press* event."""
         self._long_press_handlers.remove(func)
 
     def add_on_release(self, func: EventHandler) -> None:
+        """Adds a handler of the *release* event. This handler will be called whenever the button is released
+        after having been pressed."""
         self._release_handlers.append(func)
 
     def remove_on_release(self, func: EventHandler) -> None:
+        """Removes a handler of the *release* event."""
         self._release_handlers.remove(func)
 
     def add_on_click(self, func: EventHandler) -> None:
+        """Adds a handler of the *click* event. This handler will be called whenever the button is pressed
+        and released once. If a second click happens before :data:`double_click_timeout` expires, this event is
+        not raised. The *double click* event is raised instead."""
         self._click_handlers.append(func)
 
     def remove_on_click(self, func: EventHandler) -> None:
+        """Removes a handler of the *click* event."""
         self._click_handlers.remove(func)
 
     def add_on_double_click(self, func: EventHandler) -> None:
+        """Adds a handler of the *double click* event. This handler will be called whenever the button is pressed
+        and released twice within a period of time at most equal to :data:`double_click_timeout`.
+        """
         self._double_click_handlers.append(func)
 
     def remove_on_double_click(self, func: EventHandler) -> None:
+        """Removes a handler of the *double click* event."""
         self._double_click_handlers.remove(func)
