@@ -323,7 +323,7 @@ class Button:
     @property
     def long_pressed(self) -> bool:
         """Returns a value indicating whether the button is currently pressed and has been so for
-        least a period of time at least equal to :data:`long_press_timeout`."""
+        least a period of time at least equal to :attr:`long_press_timeout`."""
         return self._long_pressed
 
     def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], pin_input: bool) -> typing.List[concurrent.futures.Future]:
@@ -434,7 +434,7 @@ class Button:
 
     def add_on_long_press(self, func: EventHandler) -> None:
         """Adds a handler of the *long press* event. This handler will be called whenever the button has
-        been kept in its pressed state for a period of time equal to :data:`long_press_timeout` seconds."""
+        been kept in its pressed state for a period of time equal to :attr:`long_press_timeout` seconds."""
         self._long_press_handlers.append(func)
 
     def remove_on_long_press(self, func: EventHandler) -> None:
@@ -452,7 +452,7 @@ class Button:
 
     def add_on_click(self, func: EventHandler) -> None:
         """Adds a handler of the *click* event. This handler will be called whenever the button is pressed
-        and released once. If a second click happens before :data:`double_click_timeout` expires, this event is
+        and released once. If a second click happens before :attr:`double_click_timeout` expires, this event is
         not raised. The *double click* event is raised instead."""
         self._click_handlers.append(func)
 
@@ -462,7 +462,7 @@ class Button:
 
     def add_on_double_click(self, func: EventHandler) -> None:
         """Adds a handler of the *double click* event. This handler will be called whenever the button is pressed
-        and released twice within a period of time at most equal to :data:`double_click_timeout`.
+        and released twice within a period of time at most equal to :attr:`double_click_timeout`.
         """
         self._double_click_handlers.append(func)
 
