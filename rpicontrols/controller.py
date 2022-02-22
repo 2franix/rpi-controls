@@ -286,14 +286,14 @@ class Button:
         self._click_handlers: Button.EventHandlerList = []
         self._double_click_handlers: Button.EventHandlerList = []
         #: Period of time in seconds that defines the double click speed. For a double click to be detected,
-        # two clicks must occur so that the number of elapsed seconds between the first press and the second release
-        # is at most equal to this timeout.
-        # This timeout has an indirect impact on the detection of the click events: since no click event is raised
-        # when a double click occurs, the controller must wait for this double click timeout to expire once
-        # a first click has been detected before the actual click event can be raised.
+        #: two clicks must occur so that the number of elapsed seconds between the first press and the second release
+        #: is at most equal to this timeout.
+        #: This timeout has an indirect impact on the detection of the click events: since no click event is raised
+        #: when a double click occurs, the controller must wait for this double click timeout to expire once
+        #: a first click has been detected before the actual click event can be raised.
         self.double_click_timeout: float = 0.5
         #: Number of consecutive seconds the button must be pressed for the *long pressed* event
-        # to be raised.
+        #: to be raised.
         self.long_press_timeout: float = 0.5
         # Timestamps of previous presses and releases.
         self._press_times: typing.List[float] = []
@@ -323,7 +323,7 @@ class Button:
     @property
     def long_pressed(self) -> bool:
         """Returns a value indicating whether the button is currently pressed and has been so for
-        least a period of time at least equal to :attr:`Button.long_press_timeout`."""
+        least a period of time at least equal to :attr:`long_press_timeout`."""
         return self._long_pressed
 
     def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], pin_input: bool) -> typing.List[concurrent.futures.Future]:
