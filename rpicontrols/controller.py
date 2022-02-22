@@ -138,7 +138,14 @@ class Controller:
         self._buttons.remove(button)
 
     def stop(self, wait: bool = False) -> None:
-        """Stops this controller."""
+        """Stops this controller.
+
+        Attempting to stop a controller that is already stopped does nothing. Otherwise, calling this method on a controller
+        that is in a status different from :data:`Controller.Status.RUNNING` raises an exception.
+
+        :param wait: whether to block until the controller has actually stopped. If False, the method returns quicker but
+            there is no guarantee that the controller has actually reached the :data:`Status.STOPPED` status.
+        """
         get_logger().info("Stopping controller...")
         with self._status_lock:
             # Already stopped?
@@ -208,7 +215,11 @@ class Controller:
             time.sleep(0.01)
 
     def run(self) -> None:
-        """Runs the engine controlling the GPIO. See also :meth:`start_in_thread`"""
+        """Runs the engine controlling the GPIO.
+
+        This method blocks until the controller is stopped. See also :meth:`start_in_thread` for
+        a non-blocking version of this start method.
+        """
         get_logger().info("Starting the controller...")
         with self._status_lock:
             # Already running or stopping.
@@ -229,6 +240,10 @@ class Controller:
             get_logger().info("Controller is now stopped")
 
     def stop_on_signals(self, signals: typing.Iterable[signal.Signals] = [signal.SIGINT, signal.SIGTERM]):
+        """Registers a handler to stop this controller when specific signals are caught.
+
+        :param signals: list of signals that should stop this controller.
+        """
         for sig in signals:
             signal.signal(sig, self._signal_handler)
 
@@ -238,6 +253,12 @@ class Controller:
 
 
 class Button:
+    """Represents a button connected to the GPIO.
+
+    This object holds the current state of the button and the event handlers to be called when
+    events are raised.
+    """
+
     class InputType(enum.Enum):
         """Defines the various physical behaviors of a button with respect to the wiring of its corresponding GPIO pins."""
 
@@ -248,9 +269,13 @@ class Button:
         """The button is detected as pressed when its GPIO input pin is off."""
 
     SyncEventHandler = typing.Callable[["Button"], None]
+    """Represents the type for synchronous event handlers."""
     AsyncEventHandler = typing.Callable[["Button"], typing.Coroutine[typing.Any, typing.Any, typing.Any]]
+    """Represents the type for asynchronous event handlers."""
     EventHandler = typing.Union[SyncEventHandler, AsyncEventHandler]
+    """Represents the type for all kinds of event handlers (synchronous or asynchronous)."""
     EventHandlerList = typing.List[EventHandler]
+    """Represents the type for lists of event handlers (synchronous or asynchronous)."""
 
     def __init__(self, input_pin_id: int, input_type: Button.InputType, name: str = None):
         self._pin_id: int = input_pin_id
@@ -263,11 +288,15 @@ class Button:
         self._long_press_handlers: Button.EventHandlerList = []
         self._click_handlers: Button.EventHandlerList = []
         self._double_click_handlers: Button.EventHandlerList = []
-        # Maximum elapsed seconds between a press and the second release to qualify
-        # for a double click.
+        #: Period of time in seconds that defines the double click speed. For a double click to be detected,
+        #: two clicks must occur so that the number of elapsed seconds between the first press and the second release
+        #: is at most equal to this timeout.
+        #: This timeout has an indirect impact on the detection of the click events: since no click event is raised
+        #: when a double click occurs, the controller must wait for this double click timeout to expire once
+        #: a first click has been detected before the actual click event can be raised.
         self.double_click_timeout: float = 0.5
-        # Number of seconds a press must be maintained to qualify as a long
-        # press.
+        #: Number of consecutive seconds the button must be pressed for the *long pressed* event
+        #: to be raised.
         self.long_press_timeout: float = 0.5
         # Timestamps of previous presses and releases.
         self._press_times: typing.List[float] = []
@@ -276,22 +305,28 @@ class Button:
 
     @property
     def pin_id(self) -> int:
+        """Id of the input pin the button is connected to. See :meth:`Controller.make_button` for more info on its meaning."""
         return self._pin_id
 
     @property
     def name(self) -> str:
+        """Informational name of this button. This name is used mainly for logging purposes."""
         return self._name
 
     @property
     def input_type(self) -> InputType:
+        """Returns a value indicating the physical status of the button with respect to GPIO status."""
         return self._input_type
 
     @property
     def pressed(self) -> bool:
+        """Returns a value indicating whether the button is currently pressed."""
         return self._pressed
 
     @property
     def long_pressed(self) -> bool:
+        """Returns a value indicating whether the button is currently pressed and has been so for
+        least a period of time at least equal to :attr:`long_press_timeout`."""
         return self._long_pressed
 
     def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], pin_input: bool) -> typing.List[concurrent.futures.Future]:
@@ -393,31 +428,47 @@ class Button:
             get_logger().exception(e)
 
     def add_on_press(self, func: EventHandler) -> None:
+        """Adds a handler of the *press* event. This handler will be called whenever the button is pressed."""
         self._press_handlers.append(func)
 
     def remove_on_press(self, func: EventHandler) -> None:
+        """Removes a handler of the *press* event."""
         self._press_handlers.remove(func)
 
     def add_on_long_press(self, func: EventHandler) -> None:
+        """Adds a handler of the *long press* event. This handler will be called whenever the button has
+        been kept in its pressed state for a period of time equal to :attr:`long_press_timeout` seconds."""
         self._long_press_handlers.append(func)
 
     def remove_on_long_press(self, func: EventHandler) -> None:
+        """Removes a handler of the *long press* event."""
         self._long_press_handlers.remove(func)
 
     def add_on_release(self, func: EventHandler) -> None:
+        """Adds a handler of the *release* event. This handler will be called whenever the button is released
+        after having been pressed."""
         self._release_handlers.append(func)
 
     def remove_on_release(self, func: EventHandler) -> None:
+        """Removes a handler of the *release* event."""
         self._release_handlers.remove(func)
 
     def add_on_click(self, func: EventHandler) -> None:
+        """Adds a handler of the *click* event. This handler will be called whenever the button is pressed
+        and released once. If a second click happens before :attr:`double_click_timeout` expires, this event is
+        not raised. The *double click* event is raised instead."""
         self._click_handlers.append(func)
 
     def remove_on_click(self, func: EventHandler) -> None:
+        """Removes a handler of the *click* event."""
         self._click_handlers.remove(func)
 
     def add_on_double_click(self, func: EventHandler) -> None:
+        """Adds a handler of the *double click* event. This handler will be called whenever the button is pressed
+        and released twice within a period of time at most equal to :attr:`double_click_timeout`.
+        """
         self._double_click_handlers.append(func)
 
     def remove_on_double_click(self, func: EventHandler) -> None:
+        """Removes a handler of the *double click* event."""
         self._double_click_handlers.remove(func)
