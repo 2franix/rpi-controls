@@ -323,7 +323,7 @@ class Button:
     @property
     def long_pressed(self) -> bool:
         """Returns a value indicating whether the button is currently pressed and has been so for
-        least a period of time at least equal to :attr:`long_press_timeout`."""
+        least a period of time at least equal to :attr:`Button.long_press_timeout`."""
         return self._long_pressed
 
     def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], pin_input: bool) -> typing.List[concurrent.futures.Future]:
