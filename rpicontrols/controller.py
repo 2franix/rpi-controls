@@ -285,11 +285,11 @@ class Button:
         self._long_press_handlers: Button.EventHandlerList = []
         self._click_handlers: Button.EventHandlerList = []
         self._double_click_handlers: Button.EventHandlerList = []
-        # Maximum elapsed seconds between a press and the second release to qualify
-        # for a double click.
+        #: Maximum number of elapsed seconds between a press and the second release to qualify
+        #: for a double click.
         self.double_click_timeout: float = 0.5
-        # Number of seconds a press must be maintained to qualify as a long
-        # press.
+        #: Number of consecutive seconds the button must be pressed for the 'long pressed' event
+        #: to be raised.
         self.long_press_timeout: float = 0.5
         # Timestamps of previous presses and releases.
         self._press_times: typing.List[float] = []
@@ -298,22 +298,28 @@ class Button:
 
     @property
     def pin_id(self) -> int:
+        """Id of the input pin the button is connected to. See :meth:`Controller.make_button` for more info on its meaning."""
         return self._pin_id
 
     @property
     def name(self) -> str:
+        """Informational name of this button. This name is used mainly for logging purposes."""
         return self._name
 
     @property
     def input_type(self) -> InputType:
+        """Returns a value indicating the physical status of the button with respect to GPIO status."""
         return self._input_type
 
     @property
     def pressed(self) -> bool:
+        """Returns a value indicating whether the button is currently pressed."""
         return self._pressed
 
     @property
     def long_pressed(self) -> bool:
+        """Returns a value indicating whether the button is currently pressed and has been so for
+        least a period of time at least equal to :data:`long_press_timeout`."""
         return self._long_pressed
 
     def update(self, event_loop: typing.Optional[asyncio.AbstractEventLoop], pin_input: bool) -> typing.List[concurrent.futures.Future]:
