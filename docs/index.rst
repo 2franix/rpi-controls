@@ -67,6 +67,13 @@ events the same way it would with most UI frameworks.
         # Start controller main loop. Use controller.start_in_thread() for the non-blocking version.
         controller.run()
 
+As shown in the example above, event handlers can be either synchronous or asynchronous functions.
+Synchronous handlers can only run one at a time. One handler must finish its execution for another to be executed,
+so long-running synchronous handlers are discouraged. On the contrary, asynchronous handlers
+can run concurrently, in the sense that one handler can run while another is awaiting an
+IO-bound task.
+In all cases, event handlers are all run on the same thread.
+
 .. module:: rpicontrols
 
 Summary
