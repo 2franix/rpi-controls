@@ -11,6 +11,7 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
     """Implementation of the GPIO driver interface based on `RPi.GPIO <https://pypi.org/project/RPi.GPIO/>`.
     This is the default driver for button controllers.
     """
+
     def __init__(self, mode: int = GPIO.BOARD):
         gpio_driver.GpioDriver.__init__(self)
         GPIO.setmode(mode)
@@ -19,7 +20,7 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
 
     def input(self, pin_id: int) -> bool:
         input_value: bool = GPIO.input(pin_id)
-        logging.debug(f'Pin {pin_id} input state is {input_value}.')
+        logging.debug(f"Pin {pin_id} input state is {input_value}.")
         return input_value
 
     def configure_button(self, pin_id: int, pull: gpio_driver.PullType, bounce_time: int) -> None:
@@ -33,23 +34,23 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
         elif pull == gpio_driver.PullType.DOWN:
             pull_up_down = GPIO.PUD_DOWN
         else:
-            raise Exception(f'Unsupported pull type {pull}')
+            raise Exception(f"Unsupported pull type {pull}")
         # - bounce time:
         if bounce_time < 0:
-            raise ValueError(f'Bounce time {bounce_time} is not supported: must be positive.')
+            raise ValueError(f"Bounce time {bounce_time} is not supported: must be positive.")
 
         # Make sure no button has been configured for this pin before.
         if pin_id in self._bounce_times:
-            raise Exception(f'A button has already been configured for pin {pin_id}.')
+            raise Exception(f"A button has already been configured for pin {pin_id}.")
 
         GPIO.setup(pin_id, GPIO.IN, pull_up_down=pull_up_down)
         self._bounce_times[pin_id] = bounce_time
         GPIO.add_event_detect(pin_id, GPIO.BOTH, callback=self._on_edge)
-        logging.debug(f'Configured pin {pin_id} on GPIO.')
+        logging.debug(f"Configured pin {pin_id} on GPIO.")
 
     def unconfigure_button(self, pin_id: int) -> None:
         if pin_id not in self._bounce_times:
-            raise Exception(f'No button configured for pin {pin_id}.')
+            raise Exception(f"No button configured for pin {pin_id}.")
         del self._bounce_times[pin_id]
         GPIO.remove_event_detect(pin_id)
 
@@ -59,7 +60,7 @@ class RpiGpioDriver(gpio_driver.GpioDriver):
         if bounce_time is None:
             return
 
-        time.sleep(bounce_time/1000.0)
+        time.sleep(bounce_time / 1000.0)
         edge: gpio_driver.EdgeType = gpio_driver.EdgeType.RISING if GPIO.input(pin_id) else gpio_driver.EdgeType.FALLING
         if self._edge_callback:
             self._edge_callback(pin_id, edge)

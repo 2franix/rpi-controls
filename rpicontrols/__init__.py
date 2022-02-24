@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with rpi-controls.  If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Optional
+
 from .controller import Controller as Controller
 from .controller import Button as Button
 from .gpio_driver import GpioDriver as GpioDriver
@@ -25,7 +27,7 @@ __all__ = ["Controller", "Button", "GpioDriver", "PullType", "make_controller"]
 __version__ = "1.0.0.1"
 
 
-def make_controller(gpio_driver: GpioDriver = None) -> Controller:
+def make_controller(gpio_driver: Optional[GpioDriver] = None) -> Controller:
     """Creates a new instance of a button controller. One instance of a controller is required
     to work with any number of buttons, so a call to this function is mandatory when initializing
     the client code.

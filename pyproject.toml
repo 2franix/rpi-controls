@@ -5,11 +5,8 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.flake8]
-show-source = "True"
-max-complexity = 13
-max-line-length = 150
-statistics = "True"
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
 
 [tool.black]
 line-length = 150

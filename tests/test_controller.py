@@ -39,7 +39,7 @@ class GpioDriverMock(GpioDriver):
             if self._edge_callback:
                 self._edge_callback(pin_id, gpio_driver.EdgeType.RISING if state else gpio_driver.EdgeType.FALLING)
             else:
-                raise Exception('Edge callback not set yet. Test is probably misconfigured.')
+                raise Exception("Edge callback not set yet. Test is probably misconfigured.")
 
 
 class TestController:
@@ -91,9 +91,9 @@ class TestController:
 
     def test_button_name(self, controller: Controller) -> None:
         button_with_default_name = controller.make_button(10, Button.InputType.PRESSED_WHEN_ON, PullType.UP)
-        assert button_with_default_name.name == 'button for pin 10'
-        button_with_explicit_name = controller.make_button(11, Button.InputType.PRESSED_WHEN_ON, PullType.DOWN, 'Light ON/OFF')
-        assert button_with_explicit_name.name == 'Light ON/OFF'
+        assert button_with_default_name.name == "button for pin 10"
+        button_with_explicit_name = controller.make_button(11, Button.InputType.PRESSED_WHEN_ON, PullType.DOWN, "Light ON/OFF")
+        assert button_with_explicit_name.name == "Light ON/OFF"
 
     def test_button_configuration(self, controller) -> None:
         """Checks the GPIO driver is used to configure a new button."""
@@ -169,6 +169,7 @@ class TestController:
             # Waste some time to check that events are queued until they can
             # run.
             await asyncio.sleep(2)
+
         listener = ButtonListener(button, common_event_handler=wait_2_secs)
 
         # Give the controller some time to update. Event should not be raised.
@@ -187,12 +188,12 @@ class TestController:
         # Release button => event should not be called until double click
         # timeout is reached.
         pressed(False)
-        time.sleep(0.9*button.double_click_timeout - time.time() + press_time)
+        time.sleep(0.9 * button.double_click_timeout - time.time() + press_time)
         assert not button.pressed
         listener.assert_calls(press=1, release=1)
 
         # Now double click timeout has been reached, click should happen.
-        time.sleep(0.4*button.double_click_timeout)
+        time.sleep(0.4 * button.double_click_timeout)
         assert not button.pressed
         listener.assert_calls(press=1, release=1, click=1)
 
@@ -220,6 +221,7 @@ class TestController:
 
         async def wait_2_secs():
             await asyncio.sleep(2)
+
         listener = ButtonListener(button, common_event_handler=wait_2_secs)
 
         # Give the controller some time to update. Event should not be raised.
@@ -261,7 +263,8 @@ class TestController:
         button: Button = controller_in_thread.make_button(2, Button.InputType.PRESSED_WHEN_ON, PullType.NONE)
 
         async def raise_exception():
-            raise Exception('Mocks a problem in the event handler!')
+            raise Exception("Mocks a problem in the event handler!")
+
         listener = ButtonListener(button, common_event_handler=raise_exception)
 
         # Press a button.
@@ -301,7 +304,8 @@ class TestController:
             # Wait a little more to make sure the controller has reached the
             # point where it waits for the event handlers to complete.
             await asyncio.sleep(0.5)
-            raise Exception('Mocks a problem in the event handler!')
+            raise Exception("Mocks a problem in the event handler!")
+
         listener = ButtonListener(button, common_event_handler=raise_exception_with_delay)
         pressed(True)
         iteration_sleep = controller_in_thread.iteration_sleep * 2
@@ -338,7 +342,7 @@ class TestController:
 
 
 class ButtonListener:
-    def __init__(self, button: Button, common_event_handler: Callable[[], Coroutine[Any, Any, Any]] = None):
+    def __init__(self, button: Button, common_event_handler: Optional[Callable[[], Coroutine[Any, Any, Any]]] = None):
         assert button is not None
         self.button: Button = button
         self.press_call_count: int = 0

@@ -96,7 +96,9 @@ class Controller:
                     self._scheduled_updates_condition.wait()
                     get_logger().debug("Thread for scheduled updates wakes up.")
 
-    def make_button(self, input_pin_id: int, input: Button.InputType, pull: gpio_driver.PullType, name: str = None, bounce_time: int = 0) -> Button:
+    def make_button(
+        self, input_pin_id: int, input: Button.InputType, pull: gpio_driver.PullType, name: typing.Optional[str] = None, bounce_time: int = 0
+    ) -> Button:
         """Creates a new button connected to pins of the GPIO.
 
         :param input_pin_id: id of the *input* pin the button is connected to. Its meaning depends on the selected GPIO driver.
@@ -200,7 +202,7 @@ class Controller:
                     self._scheduled_updates_condition.notify()
         get_logger().debug(f"edge end: {edge} on pin {pin_id}")
 
-    def _update_button(self, button: Button, pin_input: bool = None, raise_events: bool = True) -> None:
+    def _update_button(self, button: Button, pin_input: typing.Optional[bool] = None, raise_events: bool = True) -> None:
         if self._status != Controller.Status.RUNNING:
             return
         actual_pin_input: bool = pin_input if pin_input is not None else self.driver.input(button.pin_id)
@@ -277,7 +279,7 @@ class Button:
     EventHandlerList = typing.List[EventHandler]
     """Represents the type for lists of event handlers (synchronous or asynchronous)."""
 
-    def __init__(self, input_pin_id: int, input_type: Button.InputType, name: str = None):
+    def __init__(self, input_pin_id: int, input_type: Button.InputType, name: typing.Optional[str] = None):
         self._pin_id: int = input_pin_id
         self._name: str = name or f"button for pin {input_pin_id}"
         self._input_type: Button.InputType = input_type
