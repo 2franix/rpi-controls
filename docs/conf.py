@@ -45,6 +45,7 @@ release = rpicontrols.__version__
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx_tabs.tabs",
 ]
 autodoc_typehints = "description"
 # autoclass_content = 'both'
