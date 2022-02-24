@@ -37,7 +37,7 @@ events the same way it would with most UI frameworks.
         button.add_on_click(on_click_callback)
 
         # Start controller main loop. Use controller.start_in_thread() for the non-blocking version.
-        controller.
+        controller.run()
 
     .. code-tab:: python Asynchronous
 
@@ -65,7 +65,7 @@ events the same way it would with most UI frameworks.
         button.add_on_click(on_click_callback)
 
         # Start controller main loop. Use controller.start_in_thread() for the non-blocking version.
-        controller.
+        controller.run()
 
 .. module:: rpicontrols
 
