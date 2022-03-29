@@ -18,11 +18,28 @@ exclude = [
 pythonVersion = "3.7"
 
 [tool.poetry]
-name = "rpicontrols"
+name = "rpi-controls"
 version = "0.1.0"
 description = "Library that eases interacting with physical buttons through the Raspberry Pi GPIO"
 authors = ["Cyrille Defranoux"]
-license = "GPL v3"
+maintainers = ["Cyrille Defranoux <cyrille.github@defx.fr>"]
+readme = "README.md"
+license = "GPL-3.0-or-later"
+documentation = "https://rpi-controls.readthedocs.io/en/latest/"
+repository = "https://githuob.com/2franix/rpi-controls"
+packages = [
+	{ include = "rpicontrols" }
+]
+classifiers = [
+	"Programming Language :: Python :: 3",
+	"License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+	"Operating System :: OS Independent",
+	"Development Status :: 5 - Production/Stable",
+	"Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/2franix/rpi-controls/issues"
 
 [tool.poetry.dependencies]
 python = "^3.7"
