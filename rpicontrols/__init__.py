@@ -16,7 +16,7 @@
 # along with rpi-controls.  If not, see <https://www.gnu.org/licenses/>.
 
 from typing import Optional
-import importlib.metadata
+import importlib_metadata
 
 from .controller import Controller as Controller
 from .controller import Button as Button
@@ -25,7 +25,7 @@ from .gpio_driver import PullType as PullType
 
 # Define public modules and functions.
 __all__ = ["Controller", "Button", "GpioDriver", "PullType", "make_controller"]
-__version__ = importlib.metadata.version("rpi-controls")
+__version__ = importlib_metadata.version("rpi-controls")
 
 
 def make_controller(gpio_driver: Optional[GpioDriver] = None) -> Controller:
