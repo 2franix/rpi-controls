@@ -31,6 +31,8 @@ authors = ", ".join(pyproject_toml_poetry["authors"])
 copyright = f"2021-2022, {authors}"
 
 # The full version, including alpha/beta/rc tags
+sys.path.append(os.getcwd())
+import rpicontrols
 release = pyproject_toml_poetry["version"]
 
 
