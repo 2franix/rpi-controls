@@ -25,7 +25,7 @@ root_doc = "index"
 import toml
 
 pyproject_toml = toml.load(os.path.join("..", "pyproject.toml"))
-pyproject_toml_poetry = pyproject_toml["poetry"]
+pyproject_toml_poetry = pyproject_toml["tool"]["poetry"]
 project = pyproject_toml_poetry["name"]
 authors = ", ".join(pyproject_toml_poetry["authors"])
 copyright = f"2021-2022, {authors}"
