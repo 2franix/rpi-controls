@@ -33,7 +33,7 @@ jobs:
         tox
 
     - uses: actions/upload-artifact@v3
-      if: ${{ publishes }}
+      if: ${{ inputs.publishes }}
       with:
         name: python-package
         path: dist/*
