@@ -19,7 +19,7 @@ pythonVersion = "3.7"
 
 [tool.poetry]
 name = "rpi-controls"
-version = "1.0.0"
+version = "1.0.2"
 description = "Library that eases interacting with physical buttons through the Raspberry Pi GPIO"
 authors = ["Cyrille Defranoux"]
 maintainers = ["Cyrille Defranoux <cyrille.github@defx.fr>"]
