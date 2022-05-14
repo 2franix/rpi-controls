@@ -19,14 +19,14 @@ pythonVersion = "3.7"
 
 [tool.poetry]
 name = "rpi-controls"
-version = "1.0.0-alpha1"
+version = "1.0.0"
 description = "Library that eases interacting with physical buttons through the Raspberry Pi GPIO"
 authors = ["Cyrille Defranoux"]
 maintainers = ["Cyrille Defranoux <cyrille.github@defx.fr>"]
 readme = "README.md"
 license = "GPL-3.0-or-later"
 documentation = "https://rpi-controls.readthedocs.io/en/latest/"
-repository = "https://githuob.com/2franix/rpi-controls"
+repository = "https://github.com/2franix/rpi-controls"
 packages = [
 	{ include = "rpicontrols" }
 ]
