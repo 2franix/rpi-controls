@@ -15,6 +15,10 @@ on:
         default: false
         required: false
         type: boolean
+      artifact_name:
+        description: 'Name of the artifact to publish'
+        required: true
+        type: string
 
 jobs:
   build:
@@ -35,5 +39,5 @@ jobs:
     - uses: actions/upload-artifact@v3
       if: ${{ inputs.publishes }}
       with:
-        name: python-package
+        name: ${{ inputs.artifact_name }}
         path: dist/*
