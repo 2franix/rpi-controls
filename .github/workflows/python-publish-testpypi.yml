@@ -25,7 +25,7 @@ jobs:
     steps:
     - uses: actions/download-artifact@v3
       with:
-        name: ${{ jobs.build_and_test.artifact_name }}
+        name: ${{ needs.build_and_test.artifact_name }}
         path: ./
 
     - name: Publish
