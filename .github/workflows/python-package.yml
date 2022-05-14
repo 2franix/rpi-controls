@@ -4,11 +4,19 @@
 name: CI
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_call:
+    inputs:
+      publishes:
+        description: 'Whether to publish the artifact at the end of the build'
+        default: false
+        required: false
+        type: boolean
+      artifact_name:
+        description: 'Name of the artifact to publish'
+        required: true
+        type: string
 
 jobs:
   build:
@@ -21,6 +29,13 @@ jobs:
       run: |
         sudo apt install tox npm
         npm i -g pyright
+
     - name: Test with tox
       run: |
         tox
+
+    - uses: actions/upload-artifact@v3
+      if: ${{ inputs.publishes }}
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: dist/*
