@@ -1,0 +1,40 @@
+# This workflow will upload a Python Package using Twine when a release is created
+# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
+
+name: Publish to PyPI-like repos
+
+on:
+  workflow_call:
+    inputs:
+      artifact_name:
+        description: 'Name of the artifact to push to PyPI'
+        required: true
+        type: string
+      repo_name:
+        description: 'Name of the PyPI repo'
+        required: false
+        type: string
+        default: 'pypi'
+
+jobs:
+  deploy:
+    name: Deploy to the PyPI repo
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install twine
+      run: |
+        pip install twine
+
+    - uses: actions/download-artifact@v3
+      name: Download staged artifact
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: ./dist
+
+    - name: Publish with twine
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        twine upload --skip-existing --repository ${{ inputs.repo_name }} dist/*
