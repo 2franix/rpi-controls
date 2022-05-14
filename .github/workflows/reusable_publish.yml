@@ -6,15 +6,15 @@ name: Publish to PyPI-like repos
 on:
   workflow_call:
     inputs:
-        artifact_name:
-          description: 'Name of the artifact to push to PyPI'
-          required: true
-          type: string
-        repo_name:
-          description: 'Name of the PyPI repo'
-          required: false
-          type: string
-          default: 'pypi'
+      artifact_name:
+        description: 'Name of the artifact to push to PyPI'
+        required: true
+        type: string
+      repo_name:
+        description: 'Name of the PyPI repo'
+        required: false
+        type: string
+        default: 'pypi'
 
 jobs:
   deploy:
@@ -33,6 +33,7 @@ jobs:
         path: ./dist
 
     - name: Publish with twine
+      secrets: inherit
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}

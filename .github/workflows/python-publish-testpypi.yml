@@ -13,6 +13,7 @@ on:
 jobs:
   build_and_test:
     uses: ./.github/workflows/python-package.yml
+    name: Build and test package
     with:
       publishes: true
       artifact_name: 'test_package'
