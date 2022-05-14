@@ -18,24 +18,9 @@ jobs:
       artifact_name: 'test_package'
 
   deploy:
+    uses: ./.github/workflows/reusable_publish.yml
     name: Deploy to Test PyPI
-    runs-on: ubuntu-latest
     needs: build_and_test
-
-    steps:
-    - name: Install dependencies
-      run: |
-        pip install twine
-
-    - uses: actions/download-artifact@v3
-      with:
-        #name: ${{ needs.build_and_test.inputs.artifact_name }}
-        name: 'test_package'
-        path: ./dist
-
-    - name: Publish
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        twine upload --skip-existing --repository testpypi dist/*
+    with:
+      artifact_name: 'test_package'
+      repo_name: 'testpypi'
