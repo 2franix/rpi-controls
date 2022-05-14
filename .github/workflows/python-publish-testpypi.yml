@@ -29,7 +29,8 @@ jobs:
 
     - uses: actions/download-artifact@v3
       with:
-        name: ${{ needs.build_and_test.inputs.artifact_name }}
+        #name: ${{ needs.build_and_test.inputs.artifact_name }}
+        name: 'test_package'
         path: ./
 
     - name: Publish
