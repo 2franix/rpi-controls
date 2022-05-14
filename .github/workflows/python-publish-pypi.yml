@@ -17,8 +17,10 @@ jobs:
 
   deploy:
     uses: ./.github/workflows/reusable_publish.yml
-    name: Deploy to Test PyPI
-    secrets: inherit
+    name: Deploy to PyPI
     needs: build_and_test
     with:
       artifact_name: 'release_package'
+    secrets:
+      pypi_username: ${{ secrets.PYPI_USERNAME }}
+      pypi_password: ${{ secrets.PYPI_PASSWORD }}
