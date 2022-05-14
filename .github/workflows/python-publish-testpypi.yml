@@ -9,9 +9,11 @@ on:
         - main
 
 jobs:
-  deploy:
-    name: Build and deploy python package to Test PyPI
+  build_and_test:
+    uses: ./.github/workflows/python-package.yml
 
+  deploy:
+    name: Deploy to Test PyPI
     runs-on: ubuntu-latest
 
     steps:

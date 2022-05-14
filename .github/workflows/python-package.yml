@@ -21,6 +21,12 @@ jobs:
       run: |
         sudo apt install tox npm
         npm i -g pyright
+
     - name: Test with tox
       run: |
         tox
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: python-package
+        path: dist/*
