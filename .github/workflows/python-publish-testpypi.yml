@@ -23,6 +23,10 @@ jobs:
     needs: build_and_test
 
     steps:
+    - name: Install dependencies
+      run: |
+        pip install twine
+
     - uses: actions/download-artifact@v3
       with:
         name: ${{ needs.build_and_test.artifact_name }}
