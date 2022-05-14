@@ -31,7 +31,7 @@ jobs:
       with:
         #name: ${{ needs.build_and_test.inputs.artifact_name }}
         name: 'test_package'
-        path: ./
+        path: ./dist
 
     - name: Publish
       env:
