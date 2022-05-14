@@ -9,6 +9,12 @@ on:
   pull_request:
     branches: [ main ]
   workflow_call:
+    inputs:
+      publishes:
+        description: 'Whether to publish the artifact at the end of the build'
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   build:
@@ -27,6 +33,7 @@ jobs:
         tox
 
     - uses: actions/upload-artifact@v3
+      if: ${{ publishes }}
       with:
         name: python-package
         path: dist/*
