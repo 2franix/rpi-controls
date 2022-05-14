@@ -17,7 +17,7 @@ jobs:
 
   deploy:
     uses: ./.github/workflows/reusable_publish.yml
-    name: Deploy to Test PyPI
+    name: Deploy to PyPI
     secrets: inherit
     needs: build_and_test
     with:
