@@ -25,5 +25,6 @@ jobs:
     with:
       artifact_name: 'test_package'
       repo_name: 'testpypi'
+    secrets:
       pypi_username: ${{ secrets.TESTPYPI_USERNAME }}
       pypi_password: ${{ secrets.TESTPYPI_PASSWORD }}
