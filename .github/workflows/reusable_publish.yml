@@ -33,7 +33,6 @@ jobs:
         path: ./dist
 
     - name: Publish with twine
-      secrets: inherit
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
