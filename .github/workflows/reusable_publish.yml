@@ -15,6 +15,13 @@ on:
         required: false
         type: string
         default: 'pypi'
+    secrets:
+      pypi_username:
+        description: 'PyPI repo username'
+        required: true
+      pypi_password:
+        description: 'PyPI repo password'
+        required: true
 
 jobs:
   deploy:
@@ -34,7 +41,7 @@ jobs:
 
     - name: Publish with twine
       env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        TWINE_USERNAME: ${{ secrets.pypi_username }}
+        TWINE_PASSWORD: ${{ secrets.pypi_password }}
       run: |
         twine upload --skip-existing --repository ${{ inputs.repo_name }} dist/*

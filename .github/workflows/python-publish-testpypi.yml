@@ -4,6 +4,8 @@
 name: TestPyPI
 
 on:
+  pull_request:
+    branches: [ main ]
   push:
     branches:
         - main
@@ -24,3 +26,5 @@ jobs:
     with:
       artifact_name: 'test_package'
       repo_name: 'testpypi'
+      pypi_username: ${{ secrets.TESTPYPI_USERNAME }}
+      pypi_password: ${{ secrets.TESTPYPI_PASSWORD }}
