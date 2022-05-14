@@ -22,19 +22,16 @@ root_doc = "index"
 
 # -- Project information -----------------------------------------------------
 
-# Load the setup.cfg file to avoid repeating ourselves.
-setup_cfg = ConfigParser()
-setup_cfg.read(os.path.join("..", "setup.cfg"))
+import toml
 
-project = setup_cfg["metadata"]["name"]
-author = setup_cfg["metadata"]["author"]
-copyright = f"2021, {author}"
+pyproject_toml = toml.load(os.path.join("..", "pyproject.toml"))
+pyproject_toml_poetry = pyproject_toml["tool"]["poetry"]
+project = pyproject_toml_poetry["name"]
+authors = ", ".join(pyproject_toml_poetry["authors"])
+copyright = f"2021-2022, {authors}"
 
 # The full version, including alpha/beta/rc tags
-sys.path.append(os.getcwd())
-import rpicontrols
-
-release = rpicontrols.__version__
+release = pyproject_toml_poetry["version"]
 
 
 # -- General configuration ---------------------------------------------------
